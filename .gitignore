@@ -1,0 +1,102 @@
+# =============================================================================
+#  Dinkes / Portal — root .gitignore
+#  Model: SOURCE-ONLY. Production runs `git pull && ./deploy.sh` (builds the SPA
+#  + composer install + migrate + cache on the server). Dependencies, build
+#  output, secrets, uploads, the local DB and the legacy site copy are NOT
+#  committed. Keep the *.example env templates in git.
+# =============================================================================
+
+# ---- Secrets: never commit real environment files -------------------------
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+# frontend/.env.production holds only PUBLIC Vite values (API path + reCAPTCHA
+# SITE key) and is required to build the SPA on the server, so keep it:
+!frontend/.env.production
+# ( .env.example and .env.production.example are NOT matched above → committed )
+
+# ---- PHP / Composer (backend) ---------------------------------------------
+/backend/vendor/
+/backend/auth.json
+/backend/.phpunit.result.cache
+/backend/.phpunit.cache/
+_ide_helper*.php
+.phpstorm.meta.php
+.phpactor.json
+
+# ---- Laravel runtime (regenerated on the server) --------------------------
+/backend/public/build/
+/backend/public/hot
+/backend/public/storage
+/backend/storage/*.key
+/backend/storage/pail
+# storage/framework/* & storage/logs/* keep their own Laravel .gitignore files.
+
+# ---- Local database (production uses its own DB — see .env) ----------------
+/backend/database/*.sqlite
+/backend/database/*.sqlite-journal
+*.sqlite
+
+# ---- User uploads (production keeps its own; don't sync dev files) ---------
+/backend/public/gambar/*
+!/backend/public/gambar/.gitkeep
+/backend/public/gambar/thumb/*
+!/backend/public/gambar/thumb/.gitkeep
+/backend/public/file/*
+!/backend/public/file/.gitkeep
+/backend/public/gamer/
+
+# ---- Node / Vite (frontend) -----------------------------------------------
+/frontend/node_modules/
+/backend/node_modules/
+/frontend/dist/
+/frontend/dist-ssr/
+*.local
+
+# ---- Built SPA copied into Laravel public by deploy.sh (regenerated) -------
+/backend/public/assets/
+/backend/public/index.html
+/backend/public/favicon.ico
+/backend/public/favicon.svg
+/backend/public/icons.svg
+# ( kept in git: backend/public/index.php and backend/public/.htaccess )
+
+# ---- Production build packages ---------------------------------------------
+/dist-prod/
+
+# ---- Legacy static copy of the old website (~255 MB, not part of the app) --
+/dinkes.kaltaraprov.go.id/
+
+# ---- Logs ------------------------------------------------------------------
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Editors / OS ----------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.nova/
+.zed/
+*.swp
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ---- Claude Code local config / notes --------------------------------------
+/.claude/
+
+# ---- Windows "downloaded file" marker junk ---------------------------------
+*:Zone.Identifier
+
+# ---- Loose screenshots / captures in the repo root -------------------------
+/*.png
+/screencapture-*
+/Cuplikan*

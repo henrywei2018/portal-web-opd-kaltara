@@ -1,0 +1,301 @@
+// Static UI chrome translations. CMS-driven content (menu, news, pages) keeps
+// the language it was authored in; this dictionary covers the app shell and the
+// repeated page chrome so the ID/EN switch has an immediate, visible effect.
+//
+// Keys are grouped by namespace:
+//   brand.*   - identity strings
+//   nav.*     - navigation / breadcrumb labels
+//   common.*  - generic, reused widgets (search, filters, buttons, meta)
+//   loading.* - loading messages per content type
+//   empty.*   - empty-state messages per content type
+//   page.*    - per-page headers (title / subtitle / badge)
+//   footer.*  - footer
+//   a11y.*    - aria-labels
+//
+// t() supports {placeholder} interpolation, e.g. t('common.showingResults', { count }).
+//
+// Per-page keys (kontak.*, layanan.*, data.*, profil.*, detail.*, dynamic.*, and
+// extra home.*) live in the generated pages.json and are merged in below.
+import pages from './pages.json'
+
+const base = {
+  id: {
+    'brand.subtitle': 'Pemerintah Daerah',
+
+    // Navigation / breadcrumb labels
+    'nav.beranda': 'Beranda',
+    'nav.profil': 'Profil',
+    'nav.layanan': 'Layanan',
+    'nav.berita': 'Berita',
+    'nav.artikel': 'Artikel',
+    'nav.infografis': 'Infografis',
+    'nav.pengumuman': 'Pengumuman',
+    'nav.galeri': 'Galeri',
+    'nav.video': 'Video',
+    'nav.dokumen': 'Dokumen',
+    'nav.data': 'Data',
+    'nav.kontak': 'Kontak',
+
+    // Generic, reused widgets
+    'common.search': 'Cari...',
+    'common.allCategories': 'Semua Kategori',
+    'common.all': 'Semua',
+    'common.sort': 'Urutkan',
+    'common.newest': 'Terbaru',
+    'common.oldest': 'Terlama',
+    'common.reset': 'Reset',
+    'common.clearFilter': 'Hapus Filter',
+    'common.activeFilters': 'Filter aktif:',
+    'common.searchChip': 'Pencarian: "{term}"',
+    'common.showingResults': 'Menampilkan {count} hasil',
+    'common.readMore': 'Baca Selengkapnya',
+    'common.author': 'Admin',
+    'common.comingSoon': 'Halaman ini akan segera diimplementasikan.',
+
+    // Loading messages
+    'loading.default': 'Memuat data...',
+    'loading.berita': 'Memuat berita...',
+    'loading.artikel': 'Memuat artikel...',
+    'loading.galeri': 'Memuat galeri...',
+    'loading.infografis': 'Memuat infografis...',
+    'loading.video': 'Memuat video...',
+    'loading.dokumen': 'Memuat dokumen...',
+
+    // Empty states
+    'empty.beritaTitle': 'Tidak ada berita ditemukan',
+    'empty.searchHint': 'Coba kata kunci lain atau kategori berbeda',
+    'empty.berita': 'Belum ada berita yang tersedia saat ini',
+    'empty.artikel': 'Belum ada artikel.',
+    'empty.galeri': 'Belum ada foto.',
+    'empty.infografis': 'Belum ada infografis.',
+    'empty.video': 'Belum ada video.',
+    'infografis.view': 'Perbesar',
+    'infografis.download': 'Unduh',
+
+    // Per-page headers
+    'page.berita.title': 'Berita & Artikel',
+    'page.berita.subtitle': 'Update terkini seputar kesehatan, program dinas, dan kegiatan kesehatan masyarakat',
+    'page.berita.badge': '{count} Artikel',
+    'page.artikel.title': 'Artikel',
+    'page.artikel.subtitle': 'Artikel dan informasi kesehatan untuk masyarakat',
+    'page.galeri.title': 'Galeri Foto',
+    'page.galeri.subtitle': 'Dokumentasi kegiatan dan program Dinas Kesehatan',
+    'galeri.posts': 'Postingan',
+    'galeri.tabPosts': 'Postingan',
+    'page.infografis.title': 'Infografis',
+    'page.infografis.subtitle': 'Informasi kesehatan dalam bentuk visual yang mudah dipahami',
+    'page.video.title': 'Video',
+    'page.video.subtitle': 'Video dokumentasi, edukasi, dan kegiatan kesehatan',
+    'page.dokumen.overline': 'Pusat Dokumen',
+    'page.dokumen.title': 'Dokumen',
+    'page.dokumen.subtitle': 'Dokumen produk hukum, PPID, laporan, dan publikasi resmi.',
+    'page.pengumuman.title': 'Pengumuman',
+
+    // Home page
+    'home.loading': 'Memuat halaman...',
+    'home.svc.layanan.title': 'Layanan Kesehatan',
+    'home.svc.layanan.desc': 'Informasi lengkap layanan kesehatan, fasilitas, prosedur, dan persyaratan pelayanan medis di seluruh Kalimantan Utara.',
+    'home.svc.layanan.badge': '9 Layanan',
+    'home.svc.berita.title': 'Berita Terkini',
+    'home.svc.berita.desc': 'Update terbaru seputar kesehatan, kegiatan dinas, program unggulan, dan informasi penting untuk masyarakat.',
+    'home.svc.berita.badge': 'Terbaru',
+    'home.svc.galeri.title': 'Galeri Foto',
+    'home.svc.galeri.desc': 'Dokumentasi visual kegiatan, program kesehatan, dan moment penting dalam pelayanan kepada masyarakat.',
+    'home.svc.galeri.badge': 'Foto',
+    'home.svc.video.title': 'Video',
+    'home.svc.video.desc': 'Video dokumentasi kegiatan, edukasi kesehatan, dan materi informasi medis yang mudah dipahami.',
+    'home.svc.video.badge': 'Video',
+    'home.svc.data.title': 'Data Kesehatan',
+    'home.svc.data.desc': 'Statistik kesehatan, data fasilitas, laporan tahunan, dan informasi berbasis data untuk transparansi.',
+    'home.svc.data.badge': 'Statistik',
+    'home.svc.profil.title': 'Profil Dinas',
+    'home.svc.profil.desc': 'Struktur organisasi, visi misi, sejarah, dan profil pimpinan instansi kami.',
+    'home.svc.profil.badge': 'Organisasi',
+    'home.quick.emergency.title': 'Layanan Darurat',
+    'home.quick.emergency.desc': 'Hubungi segera untuk keadaan darurat',
+    'home.quick.facilities.title': 'Cari Fasilitas Kesehatan',
+    'home.quick.facilities.desc': 'Temukan rumah sakit dan puskesmas terdekat',
+    'home.quick.schedule.title': 'Jadwal Dokter',
+    'home.quick.schedule.desc': 'Cek jadwal praktik dokter spesialis',
+    'home.quick.immunization.title': 'Info Imunisasi',
+    'home.quick.immunization.desc': 'Jadwal dan lokasi imunisasi',
+    'home.sec.quickAccess.title': 'Akses Cepat',
+    'home.sec.quickAccess.subtitle': 'Layanan dan informasi penting yang sering dicari',
+    'home.sec.links.title': 'Tautan Penting',
+    'home.sec.links.subtitle': 'Akses cepat ke situs dan layanan terkait',
+    'home.sec.services.title': 'Layanan Utama',
+    'home.sec.services.subtitle': 'Akses berbagai layanan dan informasi kesehatan dengan mudah',
+    'home.sec.services.button': 'Lihat Semua Layanan',
+    'home.sec.gallery.title': 'Galeri Kegiatan',
+    'home.sec.gallery.subtitle': 'Dokumentasi visual kegiatan dan program kesehatan',
+    'home.sec.gallery.button': 'Lihat Semua',
+    'home.cta.title': 'Butuh Informasi Lebih Lanjut?',
+    'home.cta.body': 'Tim kami siap membantu Anda mendapatkan informasi yang dibutuhkan. Hubungi kami atau kunjungi kantor kami.',
+    'home.cta.contact': 'Hubungi Kami',
+    'home.cta.location': 'Temukan Lokasi',
+
+    // Footer
+    'footer.about': 'Kami berkomitmen untuk memberikan pelayanan publik terbaik bagi masyarakat.',
+    'footer.quickLinks': 'Tautan Cepat',
+    'footer.contact': 'Hubungi Kami',
+    'footer.beritaTerkini': 'Berita Terkini',
+    'footer.pengumuman': 'Pengumuman',
+    'footer.galeri': 'Galeri Foto',
+    'footer.video': 'Video',
+    'footer.data': 'Data Kesehatan',
+    'footer.privacy': 'Kebijakan Privasi',
+    'footer.terms': 'Syarat & Ketentuan',
+    'footer.rights': 'Pemerintah Daerah.',
+
+    // Cookie consent
+    'cookie.title': 'Kebijakan Cookie',
+    'cookie.body1': 'Situs kami menggunakan cookie untuk meningkatkan pengalaman Anda. Silakan menyetujui',
+    'cookie.and': 'serta',
+    'cookie.body2': 'untuk pengalaman terbaik.',
+    'cookie.accept': 'Setuju',
+    'cookie.decline': 'Tolak',
+
+    // Aria labels
+    'a11y.theme': 'Ganti mode terang/gelap',
+    'a11y.language': 'Ganti bahasa',
+    'a11y.openMenu': 'Buka menu'
+  },
+  en: {
+    'brand.subtitle': 'Regional Government',
+
+    'nav.beranda': 'Home',
+    'nav.profil': 'Profile',
+    'nav.layanan': 'Services',
+    'nav.berita': 'News',
+    'nav.artikel': 'Articles',
+    'nav.infografis': 'Infographics',
+    'nav.pengumuman': 'Announcements',
+    'nav.galeri': 'Gallery',
+    'nav.video': 'Video',
+    'nav.dokumen': 'Documents',
+    'nav.data': 'Data',
+    'nav.kontak': 'Contact',
+
+    'common.search': 'Search...',
+    'common.allCategories': 'All Categories',
+    'common.all': 'All',
+    'common.sort': 'Sort',
+    'common.newest': 'Newest',
+    'common.oldest': 'Oldest',
+    'common.reset': 'Reset',
+    'common.clearFilter': 'Clear Filters',
+    'common.activeFilters': 'Active filters:',
+    'common.searchChip': 'Search: "{term}"',
+    'common.showingResults': 'Showing {count} result(s)',
+    'common.readMore': 'Read More',
+    'common.author': 'Admin',
+    'common.comingSoon': 'This page will be implemented soon.',
+
+    'loading.default': 'Loading...',
+    'loading.berita': 'Loading news...',
+    'loading.artikel': 'Loading articles...',
+    'loading.galeri': 'Loading gallery...',
+    'loading.infografis': 'Loading infographics...',
+    'loading.video': 'Loading videos...',
+    'loading.dokumen': 'Loading documents...',
+
+    'empty.beritaTitle': 'No news found',
+    'empty.searchHint': 'Try a different keyword or category',
+    'empty.berita': 'No news available at the moment',
+    'empty.artikel': 'No articles yet.',
+    'empty.galeri': 'No photos yet.',
+    'empty.infografis': 'No infographics yet.',
+    'empty.video': 'No videos yet.',
+    'infografis.view': 'View',
+    'infografis.download': 'Download',
+
+    'page.berita.title': 'News & Articles',
+    'page.berita.subtitle': 'Latest updates on health, agency programs, and community health activities',
+    'page.berita.badge': '{count} Articles',
+    'page.artikel.title': 'Articles',
+    'page.artikel.subtitle': 'Health articles and information for the community',
+    'page.galeri.title': 'Photo Gallery',
+    'page.galeri.subtitle': 'Documentation of Health Office activities and programs',
+    'galeri.posts': 'Posts',
+    'galeri.tabPosts': 'Posts',
+    'page.infografis.title': 'Infographics',
+    'page.infografis.subtitle': 'Health information in easy-to-understand visuals',
+    'page.video.title': 'Video',
+    'page.video.subtitle': 'Documentation, education, and health activity videos',
+    'page.dokumen.overline': 'Document Center',
+    'page.dokumen.title': 'Documents',
+    'page.dokumen.subtitle': 'Legal products, PPID, reports, and official publications.',
+    'page.pengumuman.title': 'Announcements',
+
+    'home.loading': 'Loading page...',
+    'home.svc.layanan.title': 'Health Services',
+    'home.svc.layanan.desc': 'Complete information on health services, facilities, procedures, and medical service requirements across North Kalimantan.',
+    'home.svc.layanan.badge': '9 Services',
+    'home.svc.berita.title': 'Latest News',
+    'home.svc.berita.desc': 'Latest updates on health, agency activities, flagship programs, and important information for the community.',
+    'home.svc.berita.badge': 'Latest',
+    'home.svc.galeri.title': 'Photo Gallery',
+    'home.svc.galeri.desc': 'Visual documentation of activities, health programs, and important moments in serving the community.',
+    'home.svc.galeri.badge': 'Photos',
+    'home.svc.video.title': 'Video',
+    'home.svc.video.desc': 'Activity documentation videos, health education, and easy-to-understand medical information materials.',
+    'home.svc.video.badge': 'Video',
+    'home.svc.data.title': 'Health Data',
+    'home.svc.data.desc': 'Health statistics, facility data, annual reports, and data-driven information for transparency.',
+    'home.svc.data.badge': 'Statistics',
+    'home.svc.profil.title': 'Agency Profile',
+    'home.svc.profil.desc': 'Organizational structure, vision and mission, history, and leadership profile of our institution.',
+    'home.svc.profil.badge': 'Organization',
+    'home.quick.emergency.title': 'Emergency Service',
+    'home.quick.emergency.desc': 'Call immediately for emergencies',
+    'home.quick.facilities.title': 'Find Health Facilities',
+    'home.quick.facilities.desc': 'Find the nearest hospital and community health center',
+    'home.quick.schedule.title': 'Doctor Schedule',
+    'home.quick.schedule.desc': 'Check specialist doctor practice schedules',
+    'home.quick.immunization.title': 'Immunization Info',
+    'home.quick.immunization.desc': 'Immunization schedule and locations',
+    'home.sec.quickAccess.title': 'Quick Access',
+    'home.sec.quickAccess.subtitle': 'Frequently sought important services and information',
+    'home.sec.links.title': 'Important Links',
+    'home.sec.links.subtitle': 'Quick access to related sites and services',
+    'home.sec.services.title': 'Main Services',
+    'home.sec.services.subtitle': 'Easily access various health services and information',
+    'home.sec.services.button': 'View All Services',
+    'home.sec.gallery.title': 'Activity Gallery',
+    'home.sec.gallery.subtitle': 'Visual documentation of health activities and programs',
+    'home.sec.gallery.button': 'View All',
+    'home.cta.title': 'Need More Information?',
+    'home.cta.body': 'Our team is ready to help you get the information you need. Contact us or visit our office.',
+    'home.cta.contact': 'Contact Us',
+    'home.cta.location': 'Find Location',
+
+    'footer.about': 'We are committed to providing the best public services for the community.',
+    'footer.quickLinks': 'Quick Links',
+    'footer.contact': 'Contact Us',
+    'footer.beritaTerkini': 'Latest News',
+    'footer.pengumuman': 'Announcements',
+    'footer.galeri': 'Photo Gallery',
+    'footer.video': 'Video',
+    'footer.data': 'Health Data',
+    'footer.privacy': 'Privacy Policy',
+    'footer.terms': 'Terms & Conditions',
+    'footer.rights': 'Regional Government.',
+
+    'cookie.title': 'Cookie Policy',
+    'cookie.body1': 'Our site uses cookies to improve your experience. Please accept the',
+    'cookie.and': 'and',
+    'cookie.body2': 'for the best experience.',
+    'cookie.accept': 'Accept',
+    'cookie.decline': 'Decline',
+
+    'a11y.theme': 'Toggle light/dark mode',
+    'a11y.language': 'Switch language',
+    'a11y.openMenu': 'Open menu'
+  }
+}
+
+// Merge base chrome keys with the per-page keys from pages.json
+export const translations = {
+  id: { ...base.id, ...pages.id },
+  en: { ...base.en, ...pages.en }
+}

@@ -1,0 +1,51 @@
+/* Accessibility preferences — toggled by classes on <html> by AccessibilityWidget */
+
+/* Increased text spacing */
+html.a11y-spacing,
+html.a11y-spacing * {
+  letter-spacing: 0.06em !important;
+  word-spacing: 0.16em !important;
+  line-height: 1.9 !important;
+}
+
+/* More legible font (dyslexia-friendly, system-safe) */
+html.a11y-readable,
+html.a11y-readable * {
+  font-family: Verdana, Tahoma, Arial, sans-serif !important;
+}
+
+/* Highlight links */
+html.a11y-links a {
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+  outline: 2px solid rgba(255, 179, 0, 0.9);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+/* Reduce motion / stop animations */
+html.a11y-motion *,
+html.a11y-motion *::before,
+html.a11y-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Larger cursor */
+html.a11y-cursor,
+html.a11y-cursor * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'%3E%3Cpath fill='%23111' stroke='%23fff' stroke-width='1.2' d='M5 2l14 7-6 2-2 6z'/%3E%3C/svg%3E") 4 4, auto !important;
+}
+
+/* Visible focus ring for keyboard users (always on, helps everyone) */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(0, 102, 204, 0.85) !important;
+  outline-offset: 2px !important;
+}
