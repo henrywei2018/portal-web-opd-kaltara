@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\{Berita, Kategori, Pengumuman, Galeri, Infografis, Video, Slider, Sejarah, TugasFungsi, StrukturOrganisasi, Sambutan, Download, Komentar, Artikel, Menu, Halaman, Dokumen, KategoriDokumen, Layanan, HeroSlide, Statistik, TautanPenting, Promosi, Kunjungan};
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class PublicController extends Controller
@@ -12,24 +13,95 @@ class PublicController extends Controller
     public function berita(Request $request)
     {
         $query = Berita::with(['user', 'kategori'])
-            ->where('status_berita', 'Publish')
-            ->orderBy('id_berita', 'desc');
+            ->where('status_berita', 'Publish');
 
         // Featured/pinned news (home "Berita Pilihan")
         if ($request->boolean('pinned')) {
             $query->where('is_pinned', true);
         }
 
-        if ($request->has('kategori_id')) {
-            $query->where('idkat', $request->kategori_id);
+        // Category: accepts an id (kategori_id / kategori) or a category name
+        $kategori = $request->input('kategori_id', $request->input('kategori'));
+        if ($kategori !== null && $kategori !== '') {
+            if (ctype_digit((string) $kategori)) {
+                $query->where('idkat', (int) $kategori);
+            } else {
+                $query->whereHas('kategori', fn ($q) => $q->where('nmkat', $kategori));
+            }
         }
 
-        if ($request->has('search')) {
-            $query->where('judul', 'like', '%' . $request->search . '%');
+        // Free text over title, keywords and body
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $like = '%' . addcslashes($search, '%_\\') . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('judul', 'like', $like)
+                    ->orWhere('keyword', 'like', $like)
+                    ->orWhere('isi', 'like', $like);
+            });
+        }
+
+        // Publication period
+        if (ctype_digit((string) $request->input('tahun'))) {
+            $query->whereYear('tanggal_post', (int) $request->tahun);
+        }
+        if (ctype_digit((string) $request->input('bulan'))) {
+            $query->whereMonth('tanggal_post', (int) $request->bulan);
+        }
+
+        switch ($request->input('sort', 'newest')) {
+            case 'oldest':
+                $query->orderBy('tanggal_post', 'asc')->orderBy('id_berita', 'asc');
+                break;
+            case 'popular':
+                $query->orderBy('views', 'desc')->orderBy('id_berita', 'desc');
+                break;
+            case 'title':
+                $query->orderBy('judul', 'asc');
+                break;
+            default:
+                $query->orderBy('tanggal_post', 'desc')->orderBy('id_berita', 'desc');
         }
 
         $perPage = (int) $request->get('limit', $request->get('per_page', 5));
-        return response()->json($query->paginate($perPage));
+        $perPage = max(1, min($perPage, 50));
+
+        return response()->json($query->paginate($perPage)->appends($request->query()));
+    }
+
+    /**
+     * Options for the public news filter bar: categories that actually have
+     * published news (with counts), plus the years those news were posted.
+     */
+    public function beritaFilters()
+    {
+        $kategori = Kategori::withCount(['berita' => fn ($q) => $q->where('status_berita', 'Publish')])
+            ->orderBy('nmkat')
+            ->get()
+            ->filter(fn ($k) => $k->berita_count > 0)
+            ->values();
+
+        // YEAR() is MySQL-only; pick the expression matching the active driver.
+        $yearExpr = match (DB::connection()->getDriverName()) {
+            'sqlite' => "cast(strftime('%Y', tanggal_post) as integer)",
+            'pgsql' => 'extract(year from tanggal_post)',
+            default => 'YEAR(tanggal_post)',
+        };
+
+        $tahun = Berita::where('status_berita', 'Publish')
+            ->whereNotNull('tanggal_post')
+            ->selectRaw("$yearExpr as tahun")
+            ->distinct()
+            ->orderBy('tahun', 'desc')
+            ->pluck('tahun')
+            ->map(fn ($y) => (int) $y)
+            ->values();
+
+        return response()->json([
+            'kategori' => $kategori,
+            'tahun' => $tahun,
+            'total' => Berita::where('status_berita', 'Publish')->count(),
+        ]);
     }
 
     public function detailBerita($id)

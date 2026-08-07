@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { gambarUrl } from '../../utils/assetUrl'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Container,
   Grid,
@@ -20,9 +20,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Avatar,
-  IconButton,
-  Stack
+  IconButton
 } from '@mui/material'
 import {
   Search,
@@ -30,6 +28,7 @@ import {
   Person,
   FilterList,
   Tune,
+  Close,
   ArrowForward
 } from '@mui/icons-material'
 import api from '../../utils/api'
@@ -39,77 +38,137 @@ import LoadingState from '../../components/ui/LoadingState'
 import PageHeader from '../../components/ui/PageHeader'
 import { useLanguage } from '../../contexts/LanguageContext'
 
+const PER_PAGE = 9
+const SORT_OPTIONS = ['newest', 'oldest', 'popular', 'title']
+
 const Berita = () => {
   const { t } = useLanguage()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // The URL is the single source of truth for every filter, so results stay
+  // shareable and the browser back button walks through filter changes.
+  const searchTerm = searchParams.get('q') || ''
+  const selectedCategory = searchParams.get('kategori') || ''
+  const selectedYear = searchParams.get('tahun') || ''
+  const sortParam = searchParams.get('sort') || 'newest'
+  const sortBy = SORT_OPTIONS.includes(sortParam) ? sortParam : 'newest'
+  const page = Math.max(1, parseInt(searchParams.get('page'), 10) || 1)
+
   const [berita, setBerita] = useState([])
   const [kategori, setKategori] = useState([])
-  const [page, setPage] = useState(1)
+  const [years, setYears] = useState([])
   const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [sortBy, setSortBy] = useState('newest')
+  const [firstLoad, setFirstLoad] = useState(true)
+  // Text typed in the box; pushed to the URL after a short debounce.
+  const [searchInput, setSearchInput] = useState(searchTerm)
+
+  const hasFilters = Boolean(searchTerm || selectedCategory || selectedYear) || sortBy !== 'newest'
+
+  const updateParams = useCallback((changes) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      Object.entries(changes).forEach(([key, value]) => {
+        if (value === '' || value === null || value === undefined) next.delete(key)
+        else next.set(key, String(value))
+      })
+      // Any filter change invalidates the current page number.
+      if (!('page' in changes)) next.delete('page')
+      return next
+    })
+  }, [setSearchParams])
 
   useEffect(() => {
-    fetchKategori()
+    api.get('/public/berita-filters')
+      .then((r) => {
+        setKategori(Array.isArray(r.data?.kategori) ? r.data.kategori : [])
+        setYears(Array.isArray(r.data?.tahun) ? r.data.tahun : [])
+      })
+      .catch((error) => console.error('Error fetching filter options:', error))
   }, [])
 
+  // Last value this component pushed into the URL — lets us tell our own
+  // debounced writes apart from external ones (chip delete, reset, back button).
+  const pushedSearchRef = useRef(searchTerm)
+
+  // Keep the input in sync when the URL changes from elsewhere, without
+  // clobbering what the user is still typing.
   useEffect(() => {
-    fetchBerita()
-  }, [page, selectedCategory, sortBy])
+    if (searchTerm === pushedSearchRef.current) return
+    pushedSearchRef.current = searchTerm
+    setSearchInput(searchTerm)
+  }, [searchTerm])
 
-  const fetchKategori = async () => {
-    try {
-      const response = await api.get('/public/kategori')
-      setKategori(response.data || [])
-    } catch (error) {
-      console.error('Error fetching kategori:', error)
-    }
-  }
+  useEffect(() => {
+    if (searchInput === searchTerm) return
+    const timer = setTimeout(() => {
+      pushedSearchRef.current = searchInput
+      updateParams({ q: searchInput })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchInput, searchTerm, updateParams])
 
-  const fetchBerita = async () => {
+  useEffect(() => {
+    let active = true
     setLoading(true)
-    try {
-      let endpoint = '/public/berita'
-      const params = new URLSearchParams()
 
-      if (page > 1) params.append('page', page)
-      if (selectedCategory) params.append('kategori', selectedCategory)
-      if (searchTerm) params.append('search', searchTerm)
-      if (sortBy === 'oldest') params.append('sort', 'oldest')
+    const params = new URLSearchParams({ per_page: PER_PAGE, sort: sortBy })
+    if (page > 1) params.set('page', page)
+    if (selectedCategory) params.set('kategori', selectedCategory)
+    if (selectedYear) params.set('tahun', selectedYear)
+    if (searchTerm) params.set('search', searchTerm)
 
-      if (params.toString()) {
-        endpoint += `?${params.toString()}`
-      }
+    api.get(`/public/berita?${params.toString()}`)
+      .then((response) => {
+        if (!active) return
+        const rows = response.data?.data || []
+        setBerita(rows)
+        setTotalPages(response.data?.last_page || 1)
+        setTotal(response.data?.total ?? rows.length)
+        if (searchTerm) {
+          announce(`${response.data?.total ?? rows.length} hasil ditemukan untuk "${searchTerm}".`)
+        }
+      })
+      .catch((error) => {
+        if (!active) return
+        console.error('Error fetching berita:', error)
+        setBerita([])
+        setTotalPages(1)
+        setTotal(0)
+      })
+      .finally(() => {
+        if (!active) return
+        setLoading(false)
+        setFirstLoad(false)
+      })
 
-      const response = await api.get(endpoint)
-      const rows = response.data.data || []
-      setBerita(rows)
-      setTotalPages(response.data.last_page || 1)
-      if (searchTerm) announce(`${rows.length} hasil ditemukan untuk "${searchTerm}".`)
-    } catch (error) {
-      console.error('Error fetching berita:', error)
-    } finally {
-      setLoading(false)
+    return () => { active = false }
+  }, [page, selectedCategory, selectedYear, sortBy, searchTerm])
+
+  // A stale or hand-edited ?page= past the end of the result set: fall back.
+  useEffect(() => {
+    if (!loading && page > totalPages) {
+      updateParams({ page: totalPages > 1 ? totalPages : '' })
     }
-  }
+  }, [loading, page, totalPages, updateParams])
 
   const handleSearch = (e) => {
     e.preventDefault()
-    setPage(1)
-    fetchBerita()
+    pushedSearchRef.current = searchInput
+    updateParams({ q: searchInput })
   }
 
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category)
-    setPage(1)
-  }
+  const handleCategoryChange = (category) => updateParams({ kategori: category })
 
   const clearFilters = () => {
-    setSearchTerm('')
-    setSelectedCategory('')
-    setPage(1)
+    pushedSearchRef.current = ''
+    setSearchInput('')
+    setSearchParams({})
   }
+
+  const rangeFrom = berita.length ? (page - 1) * PER_PAGE + 1 : 0
+  const rangeTo = berita.length ? rangeFrom + berita.length - 1 : 0
 
   const getCategoryColor = (katName) => {
     const colors = {
@@ -122,7 +181,7 @@ const Berita = () => {
     return colors[katName] || colors.default
   }
 
-  if (loading && page === 1) {
+  if (firstLoad) {
     return <LoadingState message={t('loading.berita')} fullScreen />
   }
 
@@ -136,7 +195,7 @@ const Berita = () => {
           { label: t('nav.beranda'), href: '/' },
           { label: t('nav.berita') }
         ]}
-        badge={{ label: t('page.berita.badge', { count: berita.length }), color: 'primary' }}
+        badge={{ label: t('page.berita.badge', { count: total }), color: 'primary' }}
       />
 
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
@@ -150,22 +209,38 @@ const Berita = () => {
             borderColor: 'divider'
           }}
         >
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={2} alignItems="center" component="form" onSubmit={handleSearch}>
             {/* Search */}
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <TextField
                 fullWidth
+                size="small"
                 placeholder={t('common.search')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 inputProps={{ 'aria-label': t('common.search') }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
                       <Search color="primary" />
                     </InputAdornment>
-                  )
+                  ),
+                  endAdornment: searchInput ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        type="button"
+                        size="small"
+                        aria-label={t('common.clearFilter')}
+                        onClick={() => {
+                          pushedSearchRef.current = ''
+                          setSearchInput('')
+                          updateParams({ q: '' })
+                        }}
+                      >
+                        <Close fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
@@ -178,9 +253,10 @@ const Berita = () => {
             {/* Category Filter */}
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <FormControl fullWidth size="small">
-                <InputLabel>{t('common.allCategories')}</InputLabel>
+                <InputLabel id="berita-kategori-label">{t('common.allCategories')}</InputLabel>
                 <Select
-                  value={selectedCategory}
+                  labelId="berita-kategori-label"
+                  value={kategori.length ? selectedCategory : ''}
                   label={t('common.allCategories')}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   sx={{ borderRadius: 2 }}
@@ -190,25 +266,49 @@ const Berita = () => {
                   </MenuItem>
                   {kategori.map((kat) => (
                     <MenuItem key={kat.idkat} value={kat.idkat.toString()}>
-                      {kat.nmkat}
+                      {kat.nmkat}{kat.berita_count != null ? ` (${kat.berita_count})` : ''}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
 
-            {/* Sort */}
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            {/* Year Filter */}
+            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
               <FormControl fullWidth size="small">
-                <InputLabel>{t('common.sort')}</InputLabel>
+                <InputLabel id="berita-tahun-label">{t('common.allYears')}</InputLabel>
                 <Select
+                  labelId="berita-tahun-label"
+                  value={years.length ? selectedYear : ''}
+                  label={t('common.allYears')}
+                  onChange={(e) => updateParams({ tahun: e.target.value })}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">
+                    <em>{t('common.allYears')}</em>
+                  </MenuItem>
+                  {years.map((year) => (
+                    <MenuItem key={year} value={year.toString()}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Sort */}
+            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel id="berita-sort-label">{t('common.sort')}</InputLabel>
+                <Select
+                  labelId="berita-sort-label"
                   value={sortBy}
                   label={t('common.sort')}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={(e) => updateParams({ sort: e.target.value === 'newest' ? '' : e.target.value })}
                   sx={{ borderRadius: 2 }}
                 >
                   <MenuItem value="newest">{t('common.newest')}</MenuItem>
                   <MenuItem value="oldest">{t('common.oldest')}</MenuItem>
+                  <MenuItem value="popular">{t('common.popular')}</MenuItem>
+                  <MenuItem value="title">{t('common.titleAZ')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -220,8 +320,8 @@ const Berita = () => {
                 variant="outlined"
                 startIcon={<Tune />}
                 onClick={clearFilters}
-                disabled={!searchTerm && !selectedCategory}
-                sx={{ borderRadius: 2 }}
+                disabled={!hasFilters}
+                sx={{ borderRadius: 2, whiteSpace: 'nowrap' }}
               >
                 {t('common.reset')}
               </Button>
@@ -230,26 +330,42 @@ const Berita = () => {
         </Paper>
 
         {/* Active Filters */}
-        {(selectedCategory || searchTerm) && (
+        {hasFilters && (
           <Box sx={{ mb: 3, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
               {t('common.activeFilters')}
             </Typography>
             {selectedCategory && (
               <Chip
-                label={kategori.find(k => k.idkat.toString() === selectedCategory)?.nmkat}
+                label={kategori.find(k => k.idkat.toString() === selectedCategory)?.nmkat || selectedCategory}
                 onDelete={() => handleCategoryChange('')}
                 size="small"
                 sx={{ bgcolor: 'primary.light', color: 'primary.contrastText' }}
+              />
+            )}
+            {selectedYear && (
+              <Chip
+                label={t('common.yearChip', { year: selectedYear })}
+                onDelete={() => updateParams({ tahun: '' })}
+                size="small"
+                sx={{ bgcolor: 'secondary.light', color: 'secondary.contrastText' }}
+              />
+            )}
+            {sortBy !== 'newest' && (
+              <Chip
+                label={t(`common.${sortBy === 'title' ? 'titleAZ' : sortBy}`)}
+                onDelete={() => updateParams({ sort: '' })}
+                size="small"
+                sx={{ bgcolor: 'action.selected', color: 'text.primary' }}
               />
             )}
             {searchTerm && (
               <Chip
                 label={t('common.searchChip', { term: searchTerm })}
                 onDelete={() => {
-                  setSearchTerm('')
-                  setPage(1)
-                  fetchBerita()
+                  pushedSearchRef.current = ''
+                  setSearchInput('')
+                  updateParams({ q: '' })
                 }}
                 size="small"
                 sx={{ bgcolor: 'info.light', color: 'info.contrastText' }}
@@ -259,10 +375,17 @@ const Berita = () => {
         )}
 
         {/* Results Info */}
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {t('common.showingResults', { count: berita.length })}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }} aria-live="polite">
+            {berita.length > 0
+              ? t('common.showingRange', { from: rangeFrom, to: rangeTo, total })
+              : t('common.showingResults', { count: 0 })}
           </Typography>
+          {totalPages > 1 && (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {t('common.pageOf', { page, totalPages })}
+            </Typography>
+          )}
         </Box>
 
         {/* News Grid */}
@@ -441,9 +564,9 @@ const Berita = () => {
               {t('empty.beritaTitle')}
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-              {searchTerm || selectedCategory ? t('empty.searchHint') : t('empty.berita')}
+              {hasFilters ? t('empty.searchHint') : t('empty.berita')}
             </Typography>
-            {(searchTerm || selectedCategory) && (
+            {hasFilters && (
               <Button variant="contained" onClick={clearFilters} sx={{ mt: 2 }}>
                 {t('common.clearFilter')}
               </Button>
@@ -458,7 +581,7 @@ const Berita = () => {
               count={totalPages}
               page={page}
               onChange={(e, value) => {
-                setPage(value)
+                updateParams({ page: value > 1 ? value : '' })
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
               color="primary"

@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Admin\{DashboardController, BeritaController, Galer
 // Public routes (no authentication)
 Route::prefix('public')->group(function () {
     Route::get('/berita', [PublicController::class, 'berita']);
+    Route::get('/berita-filters', [PublicController::class, 'beritaFilters']);
     Route::get('/berita/{id}', [PublicController::class, 'detailBerita']);
     Route::get('/kategori/{id}/berita', [PublicController::class, 'kategoriBerita']);
     Route::get('/kategori', [PublicController::class, 'kategori']);
