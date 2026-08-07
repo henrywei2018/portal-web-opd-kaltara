@@ -42,6 +42,12 @@ class SpaController extends Controller
         'home' => [null, null], // alias of home — uses the default site title
     ];
 
+    // First segments owned by the React app itself rather than by CMS content:
+    // the admin workspace and its nested routes (/admin/dashboard, /admin/berita/…)
+    // and the login screen. They have no Halaman record, so without this they fall
+    // through to the dynamic-page lookup and 404. Served 200 + noindex.
+    private const APP_ROUTES = ['admin', 'login'];
+
     public function serve(Request $request)
     {
         // Never let the SPA shadow unknown API routes — return a real 404 for those.
@@ -124,6 +130,13 @@ class SpaController extends Controller
             }
         } elseif ($path === '/') {
             // home — keep default site title/description
+        } elseif (in_array($seg, self::APP_ROUTES, true)) {
+            // Admin workspace / login: real SPA routes at any depth. React Router
+            // owns them, so serve the shell with 200 and keep them unindexed.
+            $meta['title'] = ($seg === 'login' ? 'Login' : 'Admin') . " - {$siteTitle}";
+            $meta['description'] = '';
+            $meta['noindex'] = true;
+            $jsonld = [];
         } elseif (count($segments) === 1 && array_key_exists($seg, self::STATIC_META)) {
             // Known single-segment page (e.g. /berita, /layanan, /kontak)
             [$label, $desc] = self::STATIC_META[$seg];
