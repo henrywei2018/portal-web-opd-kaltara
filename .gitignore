@@ -12,6 +12,12 @@
 .env.production
 .env.local
 .env.*.local
+# Timestamped copies left behind before key:generate / manual edits. The rules
+# above do NOT match these (`.env` only matches a file named exactly `.env`),
+# so without this line a real secret file shows up as untracked and one
+# `git add -A` would publish it.
+.env.bak*
+.env.*.bak
 # frontend/.env.production holds only PUBLIC Vite values (API path + reCAPTCHA
 # SITE key) and is required to build the SPA on the server, so keep it:
 !frontend/.env.production
@@ -100,3 +106,14 @@ Thumbs.db
 /*.png
 /screencapture-*
 /Cuplikan*
+
+# ---- Web-server artifacts in the repo root ---------------------------------
+# On the server the project root doubles as the site root, so nginx/aaPanel and
+# certbot drop their own files next to the source. All anchored with a leading
+# slash — backend/public/.htaccess and frontend/index.html are real project
+# files and must stay tracked.
+/.well-known/
+/.htaccess
+/index.html
+/404.html
+/502.html
