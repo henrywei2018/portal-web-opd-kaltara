@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PublicController;
-use App\Http\Controllers\Api\Admin\{DashboardController, BeritaController, GaleriController, InfografisController, VideoController, SliderController, KategoriController, UserController, ArtikelController, PengumumanController, HalamanController, MenuController, DokumenController, KategoriDokumenController, LayananController, HeroController, StatistikController, TautanPentingController, PromosiController, SettingController, KomentarController};
+use App\Http\Controllers\Api\Admin\{DashboardController, BeritaController, GaleriController, InfografisController, VideoController, SliderController, KategoriController, UserController, ArtikelController, PengumumanController, HalamanController, MenuController, DokumenController, KategoriDokumenController, LayananController, HeroController, StatistikController, TautanPentingController, PromosiController, SettingController, KomentarController, LaporanController};
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +63,13 @@ Route::middleware('auth:api')->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/laporan-kunjungan', [DashboardController::class, 'laporanKunjungan']);
     Route::get('/audit-log', [DashboardController::class, 'auditLog']);
+
+    // Reporting (read-only recaps for review + export)
+    Route::middleware('ability:laporan')->group(function () {
+        Route::get('laporan/berita', [LaporanController::class, 'berita']);
+        Route::get('laporan/berita/filters', [LaporanController::class, 'beritaFilters']);
+        Route::get('laporan/berita/grafik', [LaporanController::class, 'beritaGrafik']);
+    });
 
     // Content modules
     Route::post('berita/{id}/toggle-pin', [BeritaController::class, 'togglePin'])->middleware('ability:berita');

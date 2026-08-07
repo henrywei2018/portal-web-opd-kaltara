@@ -39,6 +39,7 @@ import AdminUsers from './pages/admin/UsersList'
 import AdminSettings from './pages/admin/SettingsPage'
 import AdminSeo from './pages/admin/SeoPage'
 import AdminPesan from './pages/admin/PesanList'
+import AdminLaporanBerita from './pages/admin/LaporanBerita'
 import AdminLayout from './components/admin/AdminLayout'
 import PublicLayout from './components/layout/PublicLayout'
 import LoadingState from './components/ui/LoadingState'
@@ -153,6 +154,7 @@ function App() {
           <Route path="pengaturan" element={<RequireAbility ability="pengaturan"><AdminSettings /></RequireAbility>} />
           <Route path="seo" element={<RequireAbility ability="seo"><AdminSeo /></RequireAbility>} />
           <Route path="pesan" element={<RequireAbility ability="pesan"><AdminPesan /></RequireAbility>} />
+          <Route path="laporan/berita" element={<RequireAbility ability="laporan"><AdminLaporanBerita /></RequireAbility>} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
       </Routes>

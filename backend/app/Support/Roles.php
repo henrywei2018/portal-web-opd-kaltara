@@ -25,11 +25,11 @@ class Roles
             'super_admin' => ['*'],
             'admin' => [
                 'berita', 'artikel', 'pengumuman', 'galeri', 'infografis', 'video', 'kategori',
-                'dokumen', 'layanan', 'halaman', 'menu', 'hero', 'statistik', 'pengguna', 'pengaturan', 'pesan', 'seo', 'publish',
+                'dokumen', 'layanan', 'halaman', 'menu', 'hero', 'statistik', 'pengguna', 'pengaturan', 'pesan', 'seo', 'laporan', 'publish',
             ],
             'editor' => [
                 'berita', 'artikel', 'pengumuman', 'galeri', 'infografis', 'video', 'kategori',
-                'dokumen', 'layanan', 'halaman', 'publish',
+                'dokumen', 'layanan', 'halaman', 'laporan', 'publish',
             ],
             'kontributor' => ['berita', 'artikel', 'pengumuman', 'galeri', 'infografis', 'video'],
             default => [],

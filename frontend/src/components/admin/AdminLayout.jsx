@@ -40,6 +40,7 @@ import {
   Insights as StatistikIcon,
   Link as LinkIcon,
   Campaign as CampaignIcon,
+  Summarize as ReportIcon,
   ExitToApp as LogoutIcon,
   Menu as MenuIcon,
   OpenInNew as OpenInNewIcon,
@@ -75,6 +76,12 @@ const NAV_SECTIONS = [
       { text: 'Statistik', icon: <StatistikIcon />, path: '/admin/statistik', ability: 'statistik' },
       { text: 'Halaman', icon: <WebIcon />, path: '/admin/halaman', ability: 'halaman' },
       { text: 'Menu', icon: <MenuTreeIcon />, path: '/admin/menu', ability: 'menu' }
+    ]
+  },
+  {
+    heading: 'Laporan',
+    items: [
+      { text: 'Laporan Berita', icon: <ReportIcon />, path: '/admin/laporan/berita', ability: 'laporan' }
     ]
   },
   {
