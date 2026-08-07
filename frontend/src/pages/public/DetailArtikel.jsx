@@ -9,6 +9,7 @@ import { formatDate } from '../../utils/formatters'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useSeo, excerpt } from '../../utils/seo'
 import ShareButtons from '../../components/public/ShareButtons'
+import ImageGalleryCarousel from '../../components/public/ImageGalleryCarousel'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '')
 
@@ -63,6 +64,18 @@ const DetailArtikel = () => {
           sx={{ color: 'text.primary', lineHeight: 1.8, '& p': { mb: 2 }, '& img': { maxWidth: '100%', borderRadius: 2 } }}
           dangerouslySetInnerHTML={{ __html: artikel.isi || '' }}
         />
+        {/* Photo Gallery (carousel) */}
+        {(artikel.gambar2 || artikel.gambar3) && (
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              {t('detail.photoGallery')}
+            </Typography>
+            <ImageGalleryCarousel
+              images={[artikel.gambar, artikel.gambar2, artikel.gambar3].filter(Boolean)}
+              alt={artikel.judul}
+            />
+          </Box>
+        )}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 4, flexWrap: 'wrap', borderTop: '1px solid', borderColor: 'divider', pt: 2 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, mr: 0.5 }}>Bagikan:</Typography>
           <ShareButtons title={artikel.judul} />
