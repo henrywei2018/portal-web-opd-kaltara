@@ -31,7 +31,12 @@ import {
 } from '@mui/icons-material'
 import api from '../../utils/api'
 
-const ICON_OPTIONS = ['Home', 'Info', 'Article', 'Announcement', 'PhotoLibrary', 'VideoLibrary', 'LocalHospital', 'DataUsage', 'Phone', 'Description', 'Business', 'People', 'HealthAndSafety', 'MedicalServices', 'CalendarMonth', 'Folder', 'Gavel', 'Assessment']
+// Navigation icons: a different vocabulary from content icons, so this list
+// stays local — but it no longer assumes a health agency.
+const ICON_OPTIONS = ['Home', 'Info', 'Article', 'Announcement', 'PhotoLibrary', 'VideoLibrary',
+  'DataUsage', 'Phone', 'Description', 'Business', 'People', 'CalendarMonth', 'Folder', 'Gavel',
+  'Assessment', 'AccountBalance', 'School', 'Work', 'Map', 'Policy', 'Handshake', 'Public',
+  'SupportAgent', 'Payments', 'Badge', 'Landscape']
 
 const TYPE_LABELS = { route: 'Route Internal', halaman: 'Halaman Dinamis', url: 'Link Eksternal', dropdown: 'Dropdown' }
 

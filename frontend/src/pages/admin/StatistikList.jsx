@@ -2,15 +2,18 @@ import { useEffect, useState } from 'react'
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, IconButton, Chip, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, MenuItem, Stack, Divider, Grid, Switch, FormControlLabel
+  TextField, MenuItem, Divider, Grid, Switch, FormControlLabel,
+  ListSubheader, ListItemIcon
 } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward } from '@mui/icons-material'
 import api from '../../utils/api'
+import { ICON_GROUPS, DEFAULT_ICON, renderIcon } from '../../utils/iconRegistry'
 
-const ICON_OPTIONS = ['MedicalServices', 'Groups', 'Vaccines', 'Emergency', 'LocalHospital', 'HealthAndSafety', 'Healing', 'MonitorHeart', 'People', 'Bloodtype', 'Biotech']
+// Icons come from the shared registry — the old list was health-only, so a
+// non-health agency had no usable icon for its statistics.
 const COLOR_OPTIONS = ['primary', 'secondary', 'success', 'error', 'info', 'warning']
 
-const emptyForm = { label: '', nilai: '', icon: 'MedicalServices', color: 'primary', tampil_hero: false, is_active: true, urutan: 0 }
+const emptyForm = { label: '', nilai: '', icon: DEFAULT_ICON, color: 'primary', tampil_hero: false, is_active: true, urutan: 0 }
 
 const StatistikList = () => {
   const [items, setItems] = useState([])
@@ -102,7 +105,15 @@ const StatistikList = () => {
             <Grid size={{ xs: 12, sm: 8 }}><TextField label="Label" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} fullWidth required placeholder="Fasilitas Kesehatan" /></Grid>
             <Grid size={{ xs: 6 }}>
               <TextField select label="Ikon" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} fullWidth>
-                {ICON_OPTIONS.map((n) => <MenuItem key={n} value={n}>{n}</MenuItem>)}
+                {ICON_GROUPS.flatMap((g) => [
+                  <ListSubheader key={g.label}>{g.label}</ListSubheader>,
+                  ...Object.keys(g.icons).map((n) => (
+                    <MenuItem key={n} value={n}>
+                      <ListItemIcon sx={{ minWidth: 32 }}>{renderIcon(n, { fontSize: 'small' })}</ListItemIcon>
+                      {n}
+                    </MenuItem>
+                  ))
+                ])}
               </TextField>
             </Grid>
             <Grid size={{ xs: 6 }}>

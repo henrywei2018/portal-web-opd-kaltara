@@ -7,9 +7,7 @@ import {
   Paper,
   Grid,
   Card,
-  CardContent,
   Chip,
-  Divider,
   List,
   ListItem,
   ListItemText,
@@ -21,15 +19,11 @@ import {
   AccordionSummary,
   AccordionDetails,
   Stack,
-  Alert,
-  Avatar
+  Alert
 } from '@mui/material'
 import {
   Search,
   Description,
-  HealthAndSafety,
-  LocalHospital,
-  Medication,
   Emergency,
   Assignment,
   CheckCircle,
@@ -38,346 +32,49 @@ import {
   Phone,
   LocationOn,
   ExpandMore,
-  ArrowForward,
-  DocumentScanner,
-  VerifiedUser,
-  Person,
-  Business,
   AccessTime,
   Info,
   Warning,
-  Gavel,
-  Science,
-  FamilyRestroom,
-  PregnantWoman,
-  Vaccines,
   Email
 } from '@mui/icons-material'
 import PageHeader from '../../components/ui/PageHeader'
+import LoadingState from '../../components/ui/LoadingState'
 import api from '../../utils/api'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useSettings } from '../../contexts/SettingsContext'
+import { renderIcon, categoryColor } from '../../utils/iconRegistry'
 
-const ICON_MAP = { HealthAndSafety, LocalHospital, Medication, Emergency, DocumentScanner, VerifiedUser, Person, Science, FamilyRestroom, PregnantWoman, Vaccines, Business }
-const renderServiceIcon = (name) => {
-  const IconComp = ICON_MAP[name] || LocalHospital
-  return <IconComp />
-}
 
 const Layanan = () => {
   const { t } = useLanguage()
+  const { settings } = useSettings()
+  // No hardcoded default: an agency without an emergency line shows no banner.
+  const emergencyNum = (settings.telepon_darurat || '').trim()
   const [expanded, setExpanded] = useState('panel1')
   const [searchTerm, setSearchTerm] = useState('')
   const [services, setServices] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let active = true
     api.get('/public/layanan')
-      .then((r) => setServices(Array.isArray(r.data) ? r.data : []))
-      .catch(() => {})
+      .then((r) => { if (active) setServices(Array.isArray(r.data) ? r.data : []) })
+      .catch(() => { if (active) setServices([]) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [])
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false)
   }
 
-  // Fallback data (only used if the API returns nothing)
-  const _fallbackServices = [
-    {
-      id: 'panel1',
-      title: t('layanan.fallback.sip.title'),
-      icon: <DocumentScanner />,
-      color: 'primary',
-      category: t('layanan.category.perizinan'),
-      description: t('layanan.fallback.sip.description'),
-      requirements: [
-        t('layanan.fallback.sip.req1'),
-        t('layanan.fallback.sip.req2'),
-        t('layanan.fallback.sip.req3'),
-        t('layanan.fallback.sip.req4'),
-        t('layanan.fallback.sip.req5'),
-        t('layanan.fallback.sip.req6'),
-        t('layanan.fallback.sip.req7')
-      ],
-      processingTime: t('layanan.fallback.sip.processingTime'),
-      cost: 'Rp 150.000',
-      validity: t('layanan.fallback.sip.validity'),
-      procedure: [
-        t('layanan.fallback.sip.proc1'),
-        t('layanan.fallback.sip.proc2'),
-        t('layanan.fallback.sip.proc3'),
-        t('layanan.fallback.sip.proc4'),
-        t('layanan.fallback.sip.proc5'),
-        t('layanan.fallback.sip.proc6')
-      ],
-      contact: {
-        phone: '(0551) 123456',
-        email: 'perizinan@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.sip.location')
-      }
-    },
-    {
-      id: 'panel2',
-      title: t('layanan.fallback.sertifikat.title'),
-      icon: <VerifiedUser />,
-      color: 'success',
-      category: t('layanan.category.fasilitas'),
-      description: t('layanan.fallback.sertifikat.description'),
-      requirements: [
-        t('layanan.fallback.sertifikat.req1'),
-        t('layanan.fallback.sertifikat.req2'),
-        t('layanan.fallback.sertifikat.req3'),
-        t('layanan.fallback.sertifikat.req4'),
-        t('layanan.fallback.sertifikat.req5'),
-        t('layanan.fallback.sertifikat.req6'),
-        t('layanan.fallback.sertifikat.req7'),
-        t('layanan.fallback.sertifikat.req8')
-      ],
-      processingTime: t('layanan.fallback.sertifikat.processingTime'),
-      cost: 'Rp 500.000 - Rp 2.000.000',
-      validity: t('layanan.fallback.sertifikat.validity'),
-      procedure: [
-        t('layanan.fallback.sertifikat.proc1'),
-        t('layanan.fallback.sertifikat.proc2'),
-        t('layanan.fallback.sertifikat.proc3'),
-        t('layanan.fallback.sertifikat.proc4'),
-        t('layanan.fallback.sertifikat.proc5'),
-        t('layanan.fallback.sertifikat.proc6')
-      ],
-      contact: {
-        phone: '(0551) 123457',
-        email: 'fasilitas@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.sertifikat.location')
-      }
-    },
-    {
-      id: 'panel3',
-      title: 'PSC 119 - Emergency Medical Services',
-      icon: <Emergency />,
-      color: 'error',
-      category: t('layanan.category.darurat'),
-      description: t('layanan.fallback.psc119.description'),
-      requirements: [
-        t('layanan.fallback.psc119.req1'),
-        t('layanan.fallback.psc119.req2'),
-        t('layanan.fallback.psc119.req3'),
-        t('layanan.fallback.psc119.req4')
-      ],
-      processingTime: t('layanan.fallback.psc119.processingTime'),
-      cost: t('layanan.fallback.free'),
-      validity: t('layanan.fallback.psc119.validity'),
-      procedure: [
-        t('layanan.fallback.psc119.proc1'),
-        t('layanan.fallback.psc119.proc2'),
-        t('layanan.fallback.psc119.proc3'),
-        t('layanan.fallback.psc119.proc4'),
-        t('layanan.fallback.psc119.proc5'),
-        t('layanan.fallback.psc119.proc6')
-      ],
-      contact: {
-        phone: '119 (24 Jam)',
-        email: 'psc119@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.psc119.location')
-      },
-      emergency: true
-    },
-    {
-      id: 'panel4',
-      title: t('layanan.fallback.hiv.title'),
-      icon: <HealthAndSafety />,
-      color: 'info',
-      category: t('layanan.category.masyarakat'),
-      description: t('layanan.fallback.hiv.description'),
-      requirements: [
-        t('layanan.fallback.hiv.req1'),
-        t('layanan.fallback.hiv.req2'),
-        t('layanan.fallback.hiv.req3'),
-        t('layanan.fallback.hiv.req4')
-      ],
-      processingTime: t('layanan.fallback.hiv.processingTime'),
-      cost: t('layanan.fallback.free'),
-      validity: '-',
-      procedure: [
-        t('layanan.fallback.hiv.proc1'),
-        t('layanan.fallback.hiv.proc2'),
-        t('layanan.fallback.hiv.proc3'),
-        t('layanan.fallback.hiv.proc4'),
-        t('layanan.fallback.hiv.proc5'),
-        t('layanan.fallback.hiv.proc6')
-      ],
-      contact: {
-        phone: '(0551) 123458',
-        email: 'kts@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.hiv.location')
-      }
-    },
-    {
-      id: 'panel5',
-      title: t('layanan.fallback.imunisasi.title'),
-      icon: <Vaccines />,
-      color: 'success',
-      category: t('layanan.category.anak'),
-      description: t('layanan.fallback.imunisasi.description'),
-      requirements: [
-        t('layanan.fallback.imunisasi.req1'),
-        t('layanan.fallback.imunisasi.req2'),
-        t('layanan.fallback.imunisasi.req3'),
-        t('layanan.fallback.imunisasi.req4')
-      ],
-      processingTime: t('layanan.fallback.imunisasi.processingTime'),
-      cost: t('layanan.fallback.imunisasi.cost'),
-      validity: t('layanan.fallback.imunisasi.validity'),
-      procedure: [
-        t('layanan.fallback.imunisasi.proc1'),
-        t('layanan.fallback.imunisasi.proc2'),
-        t('layanan.fallback.imunisasi.proc3'),
-        t('layanan.fallback.imunisasi.proc4'),
-        t('layanan.fallback.imunisasi.proc5'),
-        t('layanan.fallback.imunisasi.proc6'),
-        t('layanan.fallback.imunisasi.proc7')
-      ],
-      contact: {
-        phone: '(0551) 123459',
-        email: 'imunisasi@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.imunisasi.location')
-      }
-    },
-    {
-      id: 'panel6',
-      title: t('layanan.fallback.penelitian.title'),
-      icon: <Science />,
-      color: 'warning',
-      category: t('layanan.category.perizinan'),
-      description: t('layanan.fallback.penelitian.description'),
-      requirements: [
-        t('layanan.fallback.penelitian.req1'),
-        t('layanan.fallback.penelitian.req2'),
-        t('layanan.fallback.penelitian.req3'),
-        t('layanan.fallback.penelitian.req4'),
-        t('layanan.fallback.penelitian.req5'),
-        t('layanan.fallback.penelitian.req6'),
-        t('layanan.fallback.penelitian.req7'),
-        t('layanan.fallback.penelitian.req8')
-      ],
-      processingTime: t('layanan.fallback.penelitian.processingTime'),
-      cost: 'Rp 200.000',
-      validity: t('layanan.fallback.penelitian.validity'),
-      procedure: [
-        t('layanan.fallback.penelitian.proc1'),
-        t('layanan.fallback.penelitian.proc2'),
-        t('layanan.fallback.penelitian.proc3'),
-        t('layanan.fallback.penelitian.proc4'),
-        t('layanan.fallback.penelitian.proc5'),
-        t('layanan.fallback.penelitian.proc6'),
-        t('layanan.fallback.penelitian.proc7')
-      ],
-      contact: {
-        phone: '(0551) 123460',
-        email: 'penelitian@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.penelitian.location')
-      }
-    },
-    {
-      id: 'panel7',
-      title: t('layanan.fallback.jamkesda.title'),
-      icon: <FamilyRestroom />,
-      color: 'primary',
-      category: t('layanan.category.jaminan'),
-      description: t('layanan.fallback.jamkesda.description'),
-      requirements: [
-        t('layanan.fallback.jamkesda.req1'),
-        t('layanan.fallback.jamkesda.req2'),
-        t('layanan.fallback.jamkesda.req3'),
-        t('layanan.fallback.jamkesda.req4'),
-        t('layanan.fallback.jamkesda.req5'),
-        t('layanan.fallback.jamkesda.req6')
-      ],
-      processingTime: t('layanan.fallback.jamkesda.processingTime'),
-      cost: t('layanan.fallback.free'),
-      validity: t('layanan.fallback.jamkesda.validity'),
-      procedure: [
-        t('layanan.fallback.jamkesda.proc1'),
-        t('layanan.fallback.jamkesda.proc2'),
-        t('layanan.fallback.jamkesda.proc3'),
-        t('layanan.fallback.jamkesda.proc4'),
-        t('layanan.fallback.jamkesda.proc5'),
-        t('layanan.fallback.jamkesda.proc6'),
-        t('layanan.fallback.jamkesda.proc7')
-      ],
-      contact: {
-        phone: '(0551) 123461',
-        email: 'jamkesda@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.jamkesda.location')
-      }
-    },
-    {
-      id: 'panel8',
-      title: t('layanan.fallback.kb.title'),
-      icon: <PregnantWoman />,
-      color: 'info',
-      category: t('layanan.category.keluarga'),
-      description: t('layanan.fallback.kb.description'),
-      requirements: [
-        t('layanan.fallback.kb.req1'),
-        t('layanan.fallback.kb.req2'),
-        t('layanan.fallback.kb.req3'),
-        t('layanan.fallback.kb.req4')
-      ],
-      processingTime: t('layanan.fallback.kb.processingTime'),
-      cost: t('layanan.fallback.kb.cost'),
-      validity: t('layanan.fallback.kb.validity'),
-      procedure: [
-        t('layanan.fallback.kb.proc1'),
-        t('layanan.fallback.kb.proc2'),
-        t('layanan.fallback.kb.proc3'),
-        t('layanan.fallback.kb.proc4'),
-        t('layanan.fallback.kb.proc5'),
-        t('layanan.fallback.kb.proc6'),
-        t('layanan.fallback.kb.proc7')
-      ],
-      contact: {
-        phone: '(0551) 123462',
-        email: 'kb@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.kb.location')
-      }
-    },
-    {
-      id: 'panel9',
-      title: t('layanan.fallback.jiwa.title'),
-      icon: <Person />,
-      color: 'secondary',
-      category: t('layanan.category.mental'),
-      description: t('layanan.fallback.jiwa.description'),
-      requirements: [
-        t('layanan.fallback.jiwa.req1'),
-        t('layanan.fallback.jiwa.req2'),
-        t('layanan.fallback.jiwa.req3'),
-        t('layanan.fallback.jiwa.req4')
-      ],
-      processingTime: t('layanan.fallback.jiwa.processingTime'),
-      cost: t('layanan.fallback.jiwa.cost'),
-      validity: t('layanan.fallback.jiwa.validity'),
-      procedure: [
-        t('layanan.fallback.jiwa.proc1'),
-        t('layanan.fallback.jiwa.proc2'),
-        t('layanan.fallback.jiwa.proc3'),
-        t('layanan.fallback.jiwa.proc4'),
-        t('layanan.fallback.jiwa.proc5'),
-        t('layanan.fallback.jiwa.proc6'),
-        t('layanan.fallback.jiwa.proc7')
-      ],
-      contact: {
-        phone: '(0551) 123463',
-        email: 'jiwa@dinkes.kaltaraprov.go.id',
-        location: t('layanan.fallback.jiwa.location')
-      }
-    }
-  ]
-
-  // Use live data from the API; fall back to static data if empty
-  const healthServices = services.length
-    ? services.map((s) => ({
+  // Services come from the API only. There is deliberately no static fallback:
+  // requirements, fees and processing times are official information, and
+  // inventing them when the list is empty would mislead the public.
+  const healthServices = services.map((s) => ({
         id: `panel${s.id_layanan}`,
         title: s.judul,
-        icon: renderServiceIcon(s.icon),
+        icon: renderIcon(s.icon),
         color: s.color || 'primary',
         category: s.kategori || 'Lainnya',
         description: s.deskripsi || '',
@@ -386,10 +83,10 @@ const Layanan = () => {
         cost: s.biaya || '-',
         validity: s.masa_berlaku || '-',
         procedure: s.prosedur || [],
-        contact: { phone: s.kontak_telepon || '-', email: s.kontak_email || '-', location: s.kontak_lokasi || '-' },
+        // Kept empty rather than '-' so callers can tell "not set" from a value.
+        contact: { phone: s.kontak_telepon || '', email: s.kontak_email || '', location: s.kontak_lokasi || '' },
         emergency: s.darurat
-      }))
-    : _fallbackServices
+  }))
 
   // Filter services based on search
   const filteredServices = healthServices.filter(service =>
@@ -401,19 +98,9 @@ const Layanan = () => {
   // Get unique categories
   const categories = [...new Set(healthServices.map(s => s.category))]
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      'Perizinan': 'primary',
-      'Fasilitas Kesehatan': 'success',
-      'Layanan Darurat': 'error',
-      'Kesehatan Masyarakat': 'info',
-      'Kesehatan Anak': 'success',
-      'Jaminan Kesehatan': 'primary',
-      'Kesehatan Keluarga': 'info',
-      'Kesehatan Mental': 'secondary'
-    }
-    return colors[category] || 'default'
-  }
+  // Categories are free text typed by the admin, so their colour is derived
+  // rather than looked up in a fixed, sector-specific list.
+  const getCategoryColor = categoryColor
 
   return (
     <Box>
@@ -429,24 +116,28 @@ const Layanan = () => {
       />
 
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
-        {/* Emergency Alert */}
-        <Alert
-          severity="error"
-          sx={{
-            mb: { xs: 3, md: 4 },
-            borderRadius: 3,
-            '& .MuiAlert-icon': {
-              fontSize: { xs: 28, sm: 32 }
-            }
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {t('layanan.emergencyAlertTitle')}
-          </Typography>
-          <Typography variant="body2">
-            {t('layanan.emergencyAlertBefore')} <strong>PSC 119</strong> {t('layanan.emergencyAlertAfter')}
-          </Typography>
-        </Alert>
+        {/* Emergency Alert — only when an emergency number is configured. Not
+            every agency runs one, and an unconditional "call 119" banner is a
+            health-sector assumption. */}
+        {emergencyNum && (
+          <Alert
+            severity="error"
+            sx={{
+              mb: { xs: 3, md: 4 },
+              borderRadius: 3,
+              '& .MuiAlert-icon': {
+                fontSize: { xs: 28, sm: 32 }
+              }
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {t('layanan.emergencyAlertTitle')}
+            </Typography>
+            <Typography variant="body2">
+              {t('layanan.emergencyAlertBefore')} <strong>{emergencyNum}</strong> {t('layanan.emergencyAlertAfter')}
+            </Typography>
+          </Alert>
+        )}
 
         {/* Search Section */}
         <Paper
@@ -536,7 +227,21 @@ const Layanan = () => {
         </Box>
 
         {/* Services List */}
-        {filteredServices.length > 0 ? (
+        {loading ? (
+          <LoadingState message={t('layanan.loading')} />
+        ) : healthServices.length === 0 ? (
+          /* No services published at all — distinct from "search found nothing",
+             so it must not offer to clear a search that would change nothing. */
+          <Paper sx={{ p: { xs: 4, sm: 6 }, textAlign: 'center', borderRadius: 3 }}>
+            <Assignment sx={{ fontSize: { xs: 36, sm: 48 }, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              {t('layanan.emptyTitle')}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {t('layanan.emptySubtitle')}
+            </Typography>
+          </Paper>
+        ) : filteredServices.length > 0 ? (
           <Stack spacing={2}>
             {filteredServices.map((service) => (
               <Card
@@ -715,45 +420,37 @@ const Layanan = () => {
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                               <Phone sx={{ fontSize: 18, mt: 0.5 }} />
                               <Typography variant="body2">
-                                {service.contact.phone}
+                                {service.contact.phone || '-'}
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                               <Email sx={{ fontSize: 18, mt: 0.5 }} />
                               <Typography variant="body2">
-                                {service.contact.email}
+                                {service.contact.email || '-'}
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                               <LocationOn sx={{ fontSize: 18, mt: 0.5 }} />
                               <Typography variant="body2">
-                                {service.contact.location}
+                                {service.contact.location || '-'}
                               </Typography>
                             </Box>
                           </Box>
                         </Paper>
 
-                        {/* Action Button */}
-                        {service.emergency ? (
+                        {/* Action button — only when a number exists. Without
+                            this guard a service with no phone rendered a call
+                            button pointing at "tel:-". */}
+                        {service.contact.phone && (
                           <Button
                             fullWidth
-                            variant="contained"
-                            color="error"
-                            startIcon={<Emergency />}
+                            variant={service.emergency ? 'contained' : 'outlined'}
+                            color={service.emergency ? 'error' : 'primary'}
+                            startIcon={service.emergency ? <Emergency /> : <Phone />}
                             sx={{ mt: 2, fontWeight: 600 }}
                             href={`tel:${service.contact.phone}`}
                           >
-                            {t('layanan.callNow119')}
-                          </Button>
-                        ) : (
-                          <Button
-                            fullWidth
-                            variant="outlined"
-                            startIcon={<Phone />}
-                            sx={{ mt: 2, fontWeight: 600 }}
-                            href={`tel:${service.contact.phone}`}
-                          >
-                            {t('layanan.callService')}
+                            {service.emergency ? t('layanan.callEmergency') : t('layanan.callService')}
                           </Button>
                         )}
                       </Grid>
@@ -814,18 +511,22 @@ const Layanan = () => {
                 <Warning />
                 {t('layanan.operationalHoursTitle')}
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {t('layanan.operationalHoursText')}
+              {/* Real hours come from site settings; the old copy hardcoded one
+                  agency's schedule and its emergency line. */}
+              <Typography variant="body2" sx={{ mb: 2, whiteSpace: 'pre-line' }}>
+                {settings.jam_operasional?.trim() || t('layanan.operationalHoursUnset')}
               </Typography>
-              <Button
-                variant="contained"
-                color="warning"
-                href="tel:119"
-                startIcon={<Emergency />}
-                sx={{ fontWeight: 600 }}
-              >
-                {t('layanan.emergency119')}
-              </Button>
+              {emergencyNum && (
+                <Button
+                  variant="contained"
+                  color="warning"
+                  href={`tel:${emergencyNum}`}
+                  startIcon={<Emergency />}
+                  sx={{ fontWeight: 600 }}
+                >
+                  {t('layanan.emergencyCall', { num: emergencyNum })}
+                </Button>
+              )}
             </Paper>
           </Grid>
         </Grid>

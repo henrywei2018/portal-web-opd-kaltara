@@ -102,7 +102,8 @@ const Kontak = () => {
     })
   }
 
-  const emergencyNum = settings.telepon_darurat || '119'
+  // No hardcoded fallback: an agency without an emergency line shows no banner.
+  const emergencyNum = (settings.telepon_darurat || '').trim()
 
   // Contact Information (from site settings, with sensible fallbacks)
   const contactInfo = {
@@ -113,19 +114,15 @@ const Kontak = () => {
     website: settings.website || ''
   }
 
-  // Working Hours — parsed from the "jam_operasional" setting ("Day: Hours" per line)
-  const defaultHours = [
-    { day: 'Senin - Kamis', hours: '08.00 - 16.00 WITA' },
-    { day: 'Jumat', hours: '08.00 - 16.30 WITA' },
-    { day: 'Sabtu', hours: '08.00 - 12.00 WITA' },
-    { day: 'Minggu & Hari Libur', hours: 'Tutup (Kecuali Layanan Darurat)' }
-  ]
-  const workingHours = settings.jam_operasional
-    ? settings.jam_operasional.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
-        const i = line.indexOf(':')
-        return i === -1 ? { day: line, hours: '' } : { day: line.slice(0, i).trim(), hours: line.slice(i + 1).trim() }
-      })
-    : defaultHours
+  // Working Hours — parsed from the "jam_operasional" setting ("Day: Hours" per
+  // line). No hardcoded default: publishing one agency's schedule as another's
+  // would be wrong, so an unset value shows nothing rather than a guess.
+  const workingHours = (settings.jam_operasional || '')
+    .split('\n').map((line) => line.trim()).filter(Boolean)
+    .map((line) => {
+      const i = line.indexOf(':')
+      return i === -1 ? { day: line, hours: '' } : { day: line.slice(0, i).trim(), hours: line.slice(i + 1).trim() }
+    })
 
   // Social Media — built from site settings (only platforms with a URL set)
   const socialDefs = [
@@ -158,28 +155,30 @@ const Kontak = () => {
       />
 
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
-        {/* Emergency Alert */}
-        <Alert
-          severity="error"
-          sx={{
-            mb: { xs: 3, md: 4 },
-            borderRadius: 3
-          }}
-          action={
-            <Button
-              color="inherit"
-              href={`tel:${emergencyNum}`}
-              startIcon={<Emergency />}
-              sx={{ fontWeight: 600 }}
-            >
-              {t('kontak.call119', { num: emergencyNum })}
-            </Button>
-          }
-        >
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {t('kontak.emergencyAlert', { num: emergencyNum })}
-          </Typography>
-        </Alert>
+        {/* Emergency Alert — only when a number is configured */}
+        {emergencyNum && (
+          <Alert
+            severity="error"
+            sx={{
+              mb: { xs: 3, md: 4 },
+              borderRadius: 3
+            }}
+            action={
+              <Button
+                color="inherit"
+                href={`tel:${emergencyNum}`}
+                startIcon={<Emergency />}
+                sx={{ fontWeight: 600 }}
+              >
+                {t('kontak.callEmergency', { num: emergencyNum })}
+              </Button>
+            }
+          >
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {t('kontak.emergencyAlert', { num: emergencyNum })}
+            </Typography>
+          </Alert>
+        )}
 
         {/* Contact Information Grid */}
         <Grid container spacing={3} sx={{ mb: { xs: 3, md: 4 } }}>
@@ -283,39 +282,47 @@ const Kontak = () => {
                 {t('kontak.workingHoursTitle')}
               </Typography>
 
-              <List sx={{ py: 0 }}>
-                {workingHours.map((schedule, index) => (
-                  <ListItem
-                    key={index}
-                    divider={index < workingHours.length - 1}
-                    sx={{ px: 0 }}
-                  >
-                    <ListItemIcon>
-                      <AccessTime sx={{ color: 'primary.main' }} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={schedule.day}
-                      secondary={schedule.hours}
-                      slotProps={{ primary: { fontWeight: 600 }, secondary: { color: 'text.secondary' } }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-
-              <Alert
-                severity="info"
-                sx={{
-                  mt: 3,
-                  borderRadius: 2,
-                  '& .MuiAlert-icon': {
-                    fontSize: 20
-                  }
-                }}
-              >
-                <Typography variant="caption">
-                  {t('kontak.workingHoursNote')}
+              {workingHours.length > 0 ? (
+                <List sx={{ py: 0 }}>
+                  {workingHours.map((schedule, index) => (
+                    <ListItem
+                      key={index}
+                      divider={index < workingHours.length - 1}
+                      sx={{ px: 0 }}
+                    >
+                      <ListItemIcon>
+                        <AccessTime sx={{ color: 'primary.main' }} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={schedule.day}
+                        secondary={schedule.hours}
+                        slotProps={{ primary: { fontWeight: 600 }, secondary: { color: 'text.secondary' } }}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {t('kontak.workingHoursUnset')}
                 </Typography>
-              </Alert>
+              )}
+
+              {emergencyNum && (
+                <Alert
+                  severity="info"
+                  sx={{
+                    mt: 3,
+                    borderRadius: 2,
+                    '& .MuiAlert-icon': {
+                      fontSize: 20
+                    }
+                  }}
+                >
+                  <Typography variant="caption">
+                    {t('kontak.workingHoursNote', { num: emergencyNum })}
+                  </Typography>
+                </Alert>
+              )}
             </Paper>
           </Grid>
         </Grid>

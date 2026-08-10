@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Box, IconButton, Typography, Chip } from '@mui/material'
-import {
-  ChevronLeft, ChevronRight, MedicalServices, LocalHospital, VerifiedUser, Emergency,
-  HealthAndSafety, Vaccines, Science, FamilyRestroom, PregnantWoman, Person, Healing,
-  Biotech, MonitorHeart, Bloodtype, DocumentScanner
-} from '@mui/icons-material'
+import { ChevronLeft, ChevronRight } from '@mui/icons-material'
 import api from '../../utils/api'
-
-const ICONS = {
-  MedicalServices, LocalHospital, VerifiedUser, Emergency, HealthAndSafety, Vaccines, Science,
-  FamilyRestroom, PregnantWoman, Person, Healing, Biotech, MonitorHeart, Bloodtype, DocumentScanner
-}
+// Shared registry: this carousel used to keep its own health-only icon map, so
+// a service icon picked in the admin could render differently here.
+import { renderIcon } from '../../utils/iconRegistry'
 const COLOR_GRAD = {
   primary: 'linear-gradient(135deg,#0066CC,#0B3D7D)',
   secondary: 'linear-gradient(135deg,#00A651,#007840)',
@@ -56,7 +50,6 @@ const LayananCarousel = () => {
 
   const card = (item, role) => {
     const isCenter = role === 'center'
-    const Icon = ICONS[item.icon] || MedicalServices
     const common = {
       flex: '0 0 auto',
       position: 'relative',
@@ -80,7 +73,7 @@ const LayananCarousel = () => {
           <Box component="img" src={imageUrl(item.gambar)} alt={item.judul || ''} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <Box sx={{ position: 'absolute', inset: 0, background: COLOR_GRAD[item.color] || COLOR_GRAD.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon sx={{ fontSize: { xs: 44, md: 64 }, color: 'rgba(255,255,255,0.92)' }} />
+            {renderIcon(item.icon, { sx: { fontSize: { xs: 44, md: 64 }, color: 'rgba(255,255,255,0.92)' } })}
           </Box>
         )}
         <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0) 58%)' }} />

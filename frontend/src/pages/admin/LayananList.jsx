@@ -2,21 +2,24 @@ import { useEffect, useState } from 'react'
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, IconButton, Chip, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, MenuItem, Stack, Divider, Grid, Switch, FormControlLabel
+  TextField, MenuItem, Stack, Divider, Grid, Switch, FormControlLabel,
+  ListSubheader, ListItemIcon
 } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward, Image as ImageIcon } from '@mui/icons-material'
 import { CircularProgress } from '@mui/material'
 import api from '../../utils/api'
 import { resizeImageCover } from '../../utils/resizeImage'
+import { ICON_GROUPS, DEFAULT_ICON, renderIcon } from '../../utils/iconRegistry'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '')
 const imageUrl = (src) => (!src ? '' : (/^https?:\/\//.test(src) ? src : `${API_ORIGIN}/gambar/${src}`))
 
-const ICON_OPTIONS = ['DocumentScanner', 'VerifiedUser', 'Emergency', 'HealthAndSafety', 'Vaccines', 'Science', 'FamilyRestroom', 'PregnantWoman', 'Person', 'LocalHospital', 'MedicalServices', 'Healing', 'Biotech', 'MonitorHeart', 'Bloodtype']
+// Icons come from the shared registry so the picker can never offer something
+// the public pages cannot render.
 const COLOR_OPTIONS = ['primary', 'secondary', 'success', 'error', 'info', 'warning']
 
 const emptyForm = {
-  judul: '', icon: 'LocalHospital', color: 'primary', gambar: '', kategori: '', deskripsi: '',
+  judul: '', icon: DEFAULT_ICON, color: 'primary', gambar: '', kategori: '', deskripsi: '',
   persyaratan: [''], prosedur: [''], waktu: '', biaya: '', masa_berlaku: '',
   kontak_telepon: '', kontak_email: '', kontak_lokasi: '', darurat: false, status: 'Publish', urutan: 0
 }
@@ -79,7 +82,7 @@ const LayananList = () => {
   const openEdit = (it) => {
     setEditing(it)
     setForm({
-      judul: it.judul || '', icon: it.icon || 'LocalHospital', color: it.color || 'primary', gambar: it.gambar || '', kategori: it.kategori || '',
+      judul: it.judul || '', icon: it.icon || DEFAULT_ICON, color: it.color || 'primary', gambar: it.gambar || '', kategori: it.kategori || '',
       deskripsi: it.deskripsi || '', persyaratan: it.persyaratan?.length ? it.persyaratan : [''], prosedur: it.prosedur?.length ? it.prosedur : [''],
       waktu: it.waktu || '', biaya: it.biaya || '', masa_berlaku: it.masa_berlaku || '',
       kontak_telepon: it.kontak_telepon || '', kontak_email: it.kontak_email || '', kontak_lokasi: it.kontak_lokasi || '',
@@ -198,7 +201,15 @@ const LayananList = () => {
             <Grid size={{ xs: 12, sm: 4 }}><TextField label="Kategori" value={form.kategori} onChange={(e) => setForm({ ...form, kategori: e.target.value })} fullWidth /></Grid>
             <Grid size={{ xs: 6, sm: 4 }}>
               <TextField select label="Ikon" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} fullWidth>
-                {ICON_OPTIONS.map((n) => <MenuItem key={n} value={n}>{n}</MenuItem>)}
+                {ICON_GROUPS.flatMap((g) => [
+                  <ListSubheader key={g.label}>{g.label}</ListSubheader>,
+                  ...Object.keys(g.icons).map((n) => (
+                    <MenuItem key={n} value={n}>
+                      <ListItemIcon sx={{ minWidth: 32 }}>{renderIcon(n, { fontSize: 'small' })}</ListItemIcon>
+                      {n}
+                    </MenuItem>
+                  ))
+                ])}
               </TextField>
             </Grid>
             <Grid size={{ xs: 6, sm: 4 }}>

@@ -1,39 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import {
   Box,
   Container,
-  Grid,
-  Paper,
-  Typography,
-  Stack,
-  Divider,
-  Chip,
-  Button
+  Typography
 } from '@mui/material'
 import {
-  ArrowForward,
-  Newspaper,
-  Announcement,
-  PhotoLibrary,
-  VideoLibrary,
-  Phone,
-  LocationOn,
-  Email,
-  LocalHospital,
-  Vaccines,
-  Emergency,
-  TrendingUp,
-  Groups,
-  MedicalServices,
-  HealthAndSafety,
-  CalendarToday,
-  AccessTime,
   PlayArrow
 } from '@mui/icons-material'
 import api from '../../utils/api'
-import { formatDate } from '../../utils/formatters'
-import LoadingState from '../../components/ui/LoadingState'
 import PreviewModal from '../../components/public/PreviewModal'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useSeo } from '../../utils/seo'
@@ -52,22 +26,12 @@ const ytThumb = (url) => {
 
 // Design Components
 import AnimatedHero from '../../components/design/AnimatedHero'
-import SectionHeader from '../../components/design/SectionHeader'
 import SectionTitle from '../../components/design/SectionTitle'
-import ServiceCard from '../../components/design/ServiceCard'
-import StatCard from '../../components/design/StatCard'
-import NewsCard from '../../components/design/NewsCard'
-import ServicesCarousel from '../../components/design/ServicesCarousel'
 import NewsSection from '../../components/design/NewsSection'
 import ImportantLinksCarousel from '../../components/public/ImportantLinksCarousel'
 import LayananCarousel from '../../components/public/LayananCarousel'
 import VisitorStats from '../../components/public/VisitorStats'
 
-const STAT_ICONS = { MedicalServices, Groups, Vaccines, Emergency, LocalHospital, HealthAndSafety }
-const renderStatIcon = (name) => {
-  const IconComp = STAT_ICONS[name] || MedicalServices
-  return <IconComp />
-}
 
 // Session-level cache so returning to Home renders instantly (then refreshes in background)
 const EMPTY_HOME = { latestNews: [], featured: [], announcements: [], galleryImages: [], videos: [], articles: [], infografis: [], stats: [] }
