@@ -17,7 +17,7 @@ const FIELDS = [
   { section: 'Kontak', icon: <Phone fontSize="small" />, items: [
     { key: 'email', label: 'Email', icon: <Email fontSize="small" /> },
     { key: 'telepon', label: 'Telepon', icon: <Phone fontSize="small" /> },
-    { key: 'telepon_darurat', label: 'Telepon Darurat (PSC)', help: 'Nomor pada alert darurat halaman Kontak. Default: 119.' },
+    { key: 'telepon_darurat', label: 'Telepon Darurat', help: 'Kosongkan bila instansi tidak memiliki layanan darurat — peringatan darurat pada halaman Kontak dan Layanan tidak akan ditampilkan.' },
     { key: 'fax', label: 'Fax' },
     { key: 'website', label: 'Website' },
     { key: 'alamat', label: 'Alamat', multiline: true }

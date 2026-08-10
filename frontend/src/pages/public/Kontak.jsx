@@ -151,7 +151,8 @@ const Kontak = () => {
           { label: t('nav.beranda'), href: '/' },
           { label: t('nav.kontak') }
         ]}
-        badge={{ label: t('kontak.badge24_7'), color: 'success' }}
+        // Only claim round-the-clock service when an emergency line exists.
+        badge={emergencyNum ? { label: t('kontak.badge24_7'), color: 'success' } : undefined}
       />
 
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>

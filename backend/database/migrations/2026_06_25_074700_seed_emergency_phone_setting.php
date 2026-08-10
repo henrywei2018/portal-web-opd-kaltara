@@ -6,9 +6,13 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void
     {
+        // Seeded empty on purpose. This portal is a template for any agency,
+        // and 119 is the Indonesian *health* emergency line — baking it in made
+        // every fresh install advertise an emergency service it may not run.
+        // Installs that already seeded '119' keep it; clear it in Pengaturan.
         DB::table('settings')->updateOrInsert(
             ['key' => 'telepon_darurat'],
-            ['value' => '119', 'updated_at' => now(), 'created_at' => now()]
+            ['value' => '', 'updated_at' => now(), 'created_at' => now()]
         );
     }
 
