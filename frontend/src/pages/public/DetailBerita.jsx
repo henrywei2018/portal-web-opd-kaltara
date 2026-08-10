@@ -9,7 +9,6 @@ import {
   CardMedia,
   CardContent,
   Paper,
-  Avatar,
   Chip,
   IconButton,
   Divider,
@@ -17,14 +16,12 @@ import {
   Breadcrumbs,
   Stack,
   Button,
-  Skeleton
 } from '@mui/material'
 import {
   ArrowBack,
   Share,
   Visibility,
   CalendarToday,
-  Person,
   AccessTime,
   Category,
   Print
@@ -194,59 +191,43 @@ const DetailBerita = () => {
                   {berita.judul}
                 </Typography>
 
-                {/* Author and Meta Information */}
-                <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Avatar
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        bgcolor: 'secondary.light',
-                        color: 'secondary.contrastText',
-                        fontWeight: 600
-                      }}
-                    >
-                      {berita.user?.nama?.charAt(0) || 'A'}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        {berita.user?.nama || 'Administrator'}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {t('detail.author')}
-                      </Typography>
-                    </Box>
+                {/* Meta — one quiet line. Author was removed: on an official
+                    portal the publisher is the institution, not the staff
+                    member who typed it in. */}
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  divider={<Divider orientation="vertical" flexItem />}
+                  sx={{ flexWrap: 'wrap', rowGap: 1, alignItems: 'center', color: 'text.secondary', mb: 3 }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <CalendarToday sx={{ fontSize: 17 }} />
+                    <Typography variant="body2">{formatDate(berita.tanggal_post)}</Typography>
                   </Box>
-
-                  <Divider orientation="vertical" flexItem />
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <CalendarToday sx={{ fontSize: 18, color: 'text.secondary' }} />
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      {formatDate(berita.tanggal_post)}
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <AccessTime sx={{ fontSize: 18, color: 'text.secondary' }} />
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      {t('detail.readingTime', { count: readingTime })}
-                    </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <AccessTime sx={{ fontSize: 17 }} />
+                    <Typography variant="body2">{t('detail.readingTime', { count: readingTime })}</Typography>
                   </Box>
                   {berita.views > 0 && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Visibility sx={{ fontSize: 18, color: 'text.secondary' }} />
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        {berita.views.toLocaleString('id-ID')} kali dilihat
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Visibility sx={{ fontSize: 17 }} />
+                      <Typography variant="body2">
+                        {t('detail.viewCount', { count: berita.views.toLocaleString('id-ID') })}
                       </Typography>
                     </Box>
                   )}
-                </Box>
+                </Stack>
 
-                {/* Share and Print Buttons */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Divider sx={{ mb: 2 }} />
+
+                {/* Share and Print */}
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, mr: 0.5 }}>
+                    {t('detail.share')}
+                  </Typography>
                   <ShareButtons title={berita.judul} />
-                  <IconButton aria-label="Cetak halaman" onClick={handlePrint} size="small" sx={{ color: 'text.secondary' }}>
+                  <Box sx={{ flexGrow: 1 }} />
+                  <IconButton aria-label={t('detail.print')} onClick={handlePrint} size="small" sx={{ color: 'text.secondary' }}>
                     <Print />
                   </IconButton>
                 </Box>
@@ -261,58 +242,41 @@ const DetailBerita = () => {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
               }}
             >
-              {/* Tags */}
-              {berita.keyword && (
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block', fontWeight: 600 }}>
-                    {t('detail.tags')}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {berita.keyword.split(',').map((tag, index) => (
-                      <Chip
-                        key={index}
-                        label={tag.trim()}
-                        size="small"
-                        sx={{
-                          height: 24,
-                          fontSize: '0.75rem',
-                          bgcolor: 'action.hover',
-                          color: 'text.secondary'
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
-
-              {/* Article Content */}
+              {/* Article body. Styles live in `sx` rather than an injected
+                  <style> block: the old one hardcoded #212121/#0D47A1/#757575,
+                  which made the text unreadable in dark mode. */}
               <Box
+                className="article-content"
                 sx={{
-                  fontSize: '1.125rem',
-                  lineHeight: 1.8,
                   color: 'text.primary',
-                  maxWidth: '100%',
-                  overflow: 'hidden'
+                  fontSize: { xs: '1.0625rem', md: '1.125rem' },
+                  lineHeight: 1.85,
+                  // Comfortable measure — long lines are the main readability
+                  // problem on a wide article column.
+                  maxWidth: '68ch',
+                  overflowWrap: 'break-word',
+                  '& p': { mb: '1.5em' },
+                  '& h2': { fontSize: { xs: '1.4rem', md: '1.65rem' }, fontWeight: 700, mt: '1.8em', mb: '0.7em', lineHeight: 1.3 },
+                  '& h3': { fontSize: { xs: '1.2rem', md: '1.35rem' }, fontWeight: 700, mt: '1.5em', mb: '0.6em', lineHeight: 1.35 },
+                  '& img': { maxWidth: '100%', height: 'auto', borderRadius: 2, my: '1.75em', display: 'block' },
+                  '& figure': { m: 0, my: '1.75em' },
+                  '& figcaption': { fontSize: '0.85rem', color: 'text.secondary', mt: 1, textAlign: 'center' },
+                  '& ul, & ol': { mb: '1.5em', pl: '1.6em' },
+                  '& li': { mb: '0.5em' },
+                  '& a': { color: 'primary.main', textDecoration: 'underline' },
+                  '& blockquote': {
+                    borderLeft: '3px solid',
+                    borderColor: 'primary.main',
+                    pl: 2.5, ml: 0, my: '1.75em',
+                    color: 'text.secondary',
+                    fontStyle: 'italic'
+                  },
+                  '& table': { width: '100%', borderCollapse: 'collapse', my: '1.75em', display: 'block', overflowX: 'auto' },
+                  '& th, & td': { border: '1px solid', borderColor: 'divider', p: 1, textAlign: 'left' },
+                  '& pre': { bgcolor: 'action.hover', p: 2, borderRadius: 2, overflowX: 'auto' }
                 }}
-              >
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: `
-                      <style>
-                        .article-content { font-family: inherit; }
-                        .article-content p { margin-bottom: 1.5em; line-height: 1.8; }
-                        .article-content h2 { font-size: 1.75rem; font-weight: 600; margin: 2em 0 1em 0; color: #212121; }
-                        .article-content h3 { font-size: 1.5rem; font-weight: 600; margin: 1.5em 0 0.75em 0; color: #212121; }
-                        .article-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 2em 0; }
-                        .article-content ul, .article-content ol { margin-bottom: 1.5em; padding-left: 2em; }
-                        .article-content li { margin-bottom: 0.5em; }
-                        .article-content blockquote { border-left: 4px solid #0D47A1; padding-left: 1.5em; margin: 1.5em 0; color: #757575; font-style: italic; }
-                      </style>
-                      <div class="article-content">${berita.isi}</div>
-                    `
-                  }}
-                />
-              </Box>
+                dangerouslySetInnerHTML={{ __html: berita.isi || '' }}
+              />
 
               {/* Photo Gallery (carousel) */}
               {(berita.gambar2 || berita.gambar3 || berita.gambar4 || berita.gambar5) && (
@@ -326,47 +290,26 @@ const DetailBerita = () => {
                   />
                 </Box>
               )}
+
+              {/* Tags — after the article, not before it */}
+              {berita.keyword && (
+                <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block', fontWeight: 700, letterSpacing: 0.5 }}>
+                    {t('detail.tags')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                    {berita.keyword.split(',').filter((x) => x.trim()).map((tag, index) => (
+                      <Chip key={index} label={tag.trim()} size="small" variant="outlined" sx={{ height: 26 }} />
+                    ))}
+                  </Box>
+                </Box>
+              )}
             </Paper>
           </Grid>
 
-          {/* Sidebar */}
+          {/* Sidebar — sticks while a long article scrolls past */}
           <Grid size={{ xs: 12, md: 4 }}>
-            {/* Author Card */}
-            <Paper
-              sx={{
-                p: { xs: 2, sm: 3 },
-                borderRadius: 3,
-                mb: { xs: 2, sm: 3 },
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                bgcolor: 'background.paper'
-              }}
-            >
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                {t('detail.aboutAuthor')}
-              </Typography>
-              <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Avatar
-                  sx={{
-                    width: { xs: 56, sm: 64 },
-                    height: { xs: 56, sm: 64 },
-                    bgcolor: 'secondary.light',
-                    color: 'secondary.contrastText',
-                    margin: '0 auto',
-                    fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                    fontWeight: 700,
-                    mb: 2
-                  }}
-                >
-                  {berita.user?.nama?.charAt(0) || 'A'}
-                </Avatar>
-                <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  {berita.user?.nama || 'Administrator'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {berita.user?.level === 1 ? 'Administrator' : 'Editor'}
-                </Typography>
-              </Box>
-            </Paper>
+            <Box sx={{ position: { md: 'sticky' }, top: { md: 88 } }}>
 
             {/* Related Articles */}
             {related.length > 0 && (
@@ -479,6 +422,7 @@ const DetailBerita = () => {
                 </Button>
               </Stack>
             </Paper>
+            </Box>
           </Grid>
         </Grid>
       </Container>
