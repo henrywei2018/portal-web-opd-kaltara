@@ -17,7 +17,8 @@ class HeroController extends Controller
     {
         $hero = HeroSlide::create($this->validateData($request));
 
-        return response()->json($hero, 201);
+        // Pick up column defaults (e.g. `durasi`) so the response matches the row.
+        return response()->json($hero->refresh(), 201);
     }
 
     public function show($id)
@@ -56,13 +57,20 @@ class HeroController extends Controller
 
     private function validateData(Request $request)
     {
-        return $request->validate([
+        $data = $request->validate([
             'judul' => 'nullable|string|max:255',
             'subjudul' => 'nullable|string|max:255',
             'deskripsi' => 'nullable|string',
-            'bg_type' => 'required|in:color,gradient,image',
+            'bg_type' => 'required|in:color,gradient,image,youtube',
             'bg_value' => 'nullable|string|max:1000',
+            // Locally hosted still for youtube slides — shown whenever the
+            // player must not run (no cookie consent, reduced motion, offline).
+            'bg_poster' => 'nullable|string|max:255',
+            'bg_autoplay' => 'boolean',
             'overlay' => 'boolean',
+            // Seconds this slide stays on screen. Bounded so a typo can't
+            // freeze the carousel or make it flicker past unreadably.
+            'durasi' => 'nullable|integer|min:2|max:60',
             'cta_text' => 'nullable|string|max:255',
             'cta_link' => 'nullable|string|max:500',
             'cta2_text' => 'nullable|string|max:255',
@@ -71,5 +79,13 @@ class HeroController extends Controller
             'is_active' => 'boolean',
             'urutan' => 'nullable|integer',
         ]);
+
+        // `durasi` is nullable in the request but NOT NULL in the table: drop an
+        // explicit null so the column default (6s) applies instead of erroring.
+        if (array_key_exists('durasi', $data) && $data['durasi'] === null) {
+            unset($data['durasi']);
+        }
+
+        return $data;
     }
 }

@@ -1,16 +1,43 @@
 import { useState, useEffect } from 'react'
 import { Box, Container, Typography, Button, Stack, Grid, useTheme, useMediaQuery } from '@mui/material'
-import { ArrowForward, LocalHospital, HealthAndSafety, Emergency, MedicalServices, Groups, Vaccines } from '@mui/icons-material'
+import { ArrowForward, PlayArrow } from '@mui/icons-material'
 import { motion } from 'framer-motion'
 import api from '../../utils/api'
+import { youtubeId, youtubeThumb, youtubeBackgroundSrc, youtubePlayerSrc } from '../../utils/youtube'
+import PreviewModal from '../public/PreviewModal'
+import { renderIcon } from '../../utils/iconRegistry'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '')
 
-const STAT_ICONS = { MedicalServices, Groups, Vaccines, Emergency, LocalHospital, HealthAndSafety }
-const renderStatIcon = (name) => {
-  const IconComp = STAT_ICONS[name] || MedicalServices
-  return <IconComp />
+// Slide display duration in seconds. The default matches the interval that was
+// hard-coded here before slides became individually timed.
+const DEFAULT_DURASI = 6
+const MIN_DURASI = 2
+const MAX_DURASI = 60
+const clampDurasi = (v) => {
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.max(n, MIN_DURASI), MAX_DURASI) : DEFAULT_DURASI
 }
+
+/** The embed is a third-party request, so it waits for an explicit "accepted". */
+const hasCookieConsent = () => {
+  try {
+    return localStorage.getItem('cookieConsent') === 'accepted'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * An autoplaying video is motion the viewer may have asked us not to show.
+ * CSS cannot pause an iframe, so the player has to not be rendered at all.
+ */
+const motionAllowed = () => {
+  if (typeof window === 'undefined') return false
+  if (document.documentElement.classList.contains('a11y-motion')) return false
+  return !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+}
+
 
 const AnimatedHero = ({ stats: statsProp }) => {
   const theme = useTheme()
@@ -18,6 +45,27 @@ const AnimatedHero = ({ stats: statsProp }) => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [apiSlides, setApiSlides] = useState(null)
   const [statsState, setStatsState] = useState([])
+  // The YouTube player is third-party and it moves. Both must be true before it
+  // may run; otherwise the slide shows its poster instead.
+  const [consented, setConsented] = useState(hasCookieConsent)
+  const [motionOk, setMotionOk] = useState(motionAllowed)
+  const [videoOpen, setVideoOpen] = useState(false)
+
+  useEffect(() => {
+    const sync = () => { setConsented(hasCookieConsent()); setMotionOk(motionAllowed()) }
+    sync()
+    window.addEventListener('cookie-consent-changed', sync)
+    window.addEventListener('a11y-changed', sync)
+    const mq = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null
+    mq?.addEventListener?.('change', sync)
+    return () => {
+      window.removeEventListener('cookie-consent-changed', sync)
+      window.removeEventListener('a11y-changed', sync)
+      mq?.removeEventListener?.('change', sync)
+    }
+  }, [])
 
   useEffect(() => {
     api.get('/public/hero')
@@ -40,26 +88,52 @@ const AnimatedHero = ({ stats: statsProp }) => {
     ? apiSlides.map((s) => ({
         title: s.judul, subtitle: s.subjudul, description: s.deskripsi,
         cta: s.cta_text, ctaLink: s.cta_link, secondaryCta: s.cta2_text, secondaryLink: s.cta2_link,
-        bgType: s.bg_type, bgValue: s.bg_value, overlay: s.overlay, showStats: s.tampil_statistik,
+        bgType: s.bg_type, bgValue: s.bg_value, bgPoster: s.bg_poster, bgAutoplay: s.bg_autoplay,
+        overlay: s.overlay, showStats: s.tampil_statistik,
+        durasi: clampDurasi(s.durasi),
         bgColor: s.bg_type === 'color' ? (s.bg_value || theme.palette.primary.main) : theme.palette.primary.main
       }))
-    : fallbackSlides.map((s) => ({ ...s, bgType: 'color', bgValue: s.bgColor, overlay: false, showStats: true }))
+    : fallbackSlides.map((s) => ({ ...s, bgType: 'color', bgValue: s.bgColor, overlay: false, showStats: true, durasi: DEFAULT_DURASI }))
 
   const slide = slides[currentSlide] || slides[0] || {}
 
+  // Each slide holds for its own configured duration, so the timer is re-armed
+  // per slide rather than run as one fixed interval.
+  const slideCount = slides.length
+  const currentDurasi = slide.durasi || DEFAULT_DURASI
   useEffect(() => {
-    if (slides.length <= 1) return undefined
-    const interval = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 6000)
-    return () => clearInterval(interval)
-  }, [slides.length])
+    // Rotating behind an open video would swap the slide out from under the
+    // player the visitor is watching.
+    if (slideCount <= 1 || videoOpen) return undefined
+    const timer = setTimeout(() => setCurrentSlide((prev) => (prev + 1) % slideCount), currentDurasi * 1000)
+    return () => clearTimeout(timer)
+  }, [slideCount, currentSlide, currentDurasi, videoOpen])
+
+  const isYoutube = slide.bgType === 'youtube' && Boolean(youtubeId(slide.bgValue))
+  // A youtube slide falls back to its locally hosted poster whenever the player
+  // is withheld, so the hero is never a bare colour block. YouTube's own
+  // thumbnail is only a last resort, and only once consent exists — it is still
+  // a request to a third party.
+  const posterUrl = slide.bgPoster
+    ? `${API_ORIGIN}/gambar/${slide.bgPoster}`
+    : (isYoutube && consented ? youtubeThumb(slide.bgValue) : '')
 
   // Background style for the current slide
   const heroBg = slide.bgType === 'gradient' && slide.bgValue
     ? { background: slide.bgValue }
     : slide.bgType === 'image' && slide.bgValue
       ? { backgroundImage: `url('${API_ORIGIN}/gambar/${slide.bgValue}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
-      : { bgcolor: slide.bgValue || slide.bgColor || theme.palette.primary.main }
+      : isYoutube && posterUrl
+        ? { backgroundImage: `url('${posterUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
+        : { bgcolor: slide.bgValue || slide.bgColor || theme.palette.primary.main }
   const isImage = slide.bgType === 'image' && slide.bgValue
+  // Two ways a youtube slide can behave. Click-to-play is the default and needs
+  // none of the gates, because nothing third-party loads until the visitor asks.
+  const autoplayBg = isYoutube && slide.bgAutoplay === true
+  const clickToPlay = isYoutube && !autoplayBg
+  const playVideo = autoplayBg && consented && motionOk
+  // The dark scrim exists for text contrast; video needs it as much as a photo.
+  const needsOverlay = (isImage || isYoutube) && slide.overlay !== false
   const btnColor = slide.bgType === 'color' ? (slide.bgValue || slide.bgColor) : '#0066CC'
   const hasStats = slide.showStats !== false && heroStats.length > 0
 
@@ -83,8 +157,40 @@ const AnimatedHero = ({ stats: statsProp }) => {
         ...heroBg
       }}
     >
-      {/* Dark overlay for image backgrounds */}
-      {isImage && slide.overlay !== false && (
+      {/* YouTube background player. Sits above the poster (which stays as the
+          box background, so it shows while the player loads) and below the
+          scrim. `pointer-events: none` keeps clicks on the CTA buttons and
+          stops YouTube's hover chrome from appearing. */}
+      {playVideo && (
+        <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
+          <Box
+            component="iframe"
+            src={youtubeBackgroundSrc(slide.bgValue, { origin: window.location.origin })}
+            title={slide.title || 'Video latar'}
+            tabIndex={-1}
+            frameBorder="0"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            referrerPolicy="strict-origin-when-cross-origin"
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              // The iframe is locked to 16:9, the hero is not. Growing it past
+              // both edges and centring it is what produces a `cover` crop.
+              aspectRatio: '16 / 9',
+              width: 'auto',
+              height: 'auto',
+              minWidth: '100%',
+              minHeight: '100%',
+              border: 0
+            }}
+          />
+        </Box>
+      )}
+
+      {/* Dark overlay for image and video backgrounds */}
+      {needsOverlay && (
         <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(7,34,63,0.55)', pointerEvents: 'none' }} />
       )}
 
@@ -128,6 +234,15 @@ const AnimatedHero = ({ stats: statsProp }) => {
                       {slide.secondaryCta}
                     </Button>
                   )}
+                  {clickToPlay && (
+                    <Button
+                      variant="outlined" size="large" startIcon={<PlayArrow />}
+                      onClick={() => setVideoOpen(true)}
+                      sx={{ px: 4, py: 1.5, fontSize: '1rem', borderColor: 'white', color: 'white', fontWeight: 600, '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)', transform: 'translateY(-2px)' } }}
+                    >
+                      Putar Video
+                    </Button>
+                  )}
                 </Stack>
               </motion.div>
             </motion.div>
@@ -140,7 +255,7 @@ const AnimatedHero = ({ stats: statsProp }) => {
                 {heroStats.map((stat, index) => (
                   <motion.div key={stat.id_statistik || index} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + index * 0.1 }}>
                     <Box sx={{ bgcolor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', borderRadius: 3, p: 2.5, display: 'flex', alignItems: 'center', gap: 2, border: '1px solid rgba(255,255,255,0.2)', transition: 'all 0.3s', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)', transform: 'translateX(-4px)' } }}>
-                      <Box sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{renderStatIcon(stat.icon)}</Box>
+                      <Box sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{renderIcon(stat.icon)}</Box>
                       <Box sx={{ flexGrow: 1 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem' }}>{stat.nilai}</Typography>
                         <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>{stat.label}</Typography>
@@ -170,6 +285,15 @@ const AnimatedHero = ({ stats: statsProp }) => {
           <path d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,58.7C960,64,1056,64,1152,58.7C1248,53,1344,43,1392,37.3L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z" fill={theme.palette.background.default} />
         </svg>
       </Box>
+
+      {/* Click-to-play: nothing from YouTube is requested until this opens. */}
+      <PreviewModal
+        open={videoOpen}
+        onClose={() => setVideoOpen(false)}
+        type="video"
+        src={youtubePlayerSrc(slide.bgValue)}
+        title={slide.title || 'Video'}
+      />
     </Box>
   )
 }

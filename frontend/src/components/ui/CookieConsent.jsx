@@ -31,15 +31,21 @@ const CookieConsent = () => {
     }
   }, [])
 
+  // Third-party embeds (e.g. the hero's YouTube background) hold off until
+  // consent is given, so they need to hear about the decision without a reload.
+  const announceConsent = () => window.dispatchEvent(new Event('cookie-consent-changed'))
+
   const handleAccept = () => {
     localStorage.setItem('cookieConsent', 'accepted')
     setIsAccepted(true)
     setIsVisible(false)
+    announceConsent()
   }
 
   const handleDecline = () => {
     localStorage.setItem('cookieConsent', 'declined')
     setIsVisible(false)
+    announceConsent()
   }
 
   const handleClose = () => {

@@ -1,16 +1,28 @@
 import { useEffect, useState } from 'react'
 import {
   Box, Typography, Button, Paper, IconButton, Chip, Tooltip, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, MenuItem, Stack, Divider, Grid, Switch, FormControlLabel, CircularProgress
+  DialogActions, TextField, MenuItem, Stack, Divider, Grid, Switch, FormControlLabel, CircularProgress,
+  InputAdornment
 } from '@mui/material'
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward, Image as ImageIcon } from '@mui/icons-material'
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward, Image as ImageIcon, Timer as TimerIcon } from '@mui/icons-material'
 import api from '../../utils/api'
+import { youtubeId, youtubeThumb } from '../../utils/youtube'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '')
 const imageUrl = (f) => (!f ? '' : (/^https?:\/\//.test(f) ? f : `${API_ORIGIN}/gambar/${f}`))
 
+// Seconds a slide stays on screen; must match the bounds the API validates.
+const DEFAULT_DURASI = 6
+const MIN_DURASI = 2
+const MAX_DURASI = 60
+const clampDurasi = (v) => {
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.max(Math.round(n), MIN_DURASI), MAX_DURASI) : DEFAULT_DURASI
+}
+
 const emptyForm = {
-  judul: '', subjudul: '', deskripsi: '', bg_type: 'color', bg_value: '#0066CC', overlay: true,
+  judul: '', subjudul: '', deskripsi: '', bg_type: 'color', bg_value: '#0066CC', bg_poster: '', bg_autoplay: false, overlay: true,
+  durasi: DEFAULT_DURASI,
   cta_text: '', cta_link: '', cta2_text: '', cta2_link: '', tampil_statistik: true, is_active: true, urutan: 0
 }
 
@@ -18,6 +30,11 @@ const bgPreview = (form) => {
   if (form.bg_type === 'color') return { background: form.bg_value || '#0066CC' }
   if (form.bg_type === 'gradient') return { background: form.bg_value || 'linear-gradient(135deg,#0066CC,#00A651)' }
   if (form.bg_type === 'image') return { backgroundImage: `url('${imageUrl(form.bg_value)}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
+  if (form.bg_type === 'youtube') {
+    // Prefer the uploaded poster — that is what visitors actually see first.
+    const src = form.bg_poster ? imageUrl(form.bg_poster) : youtubeThumb(form.bg_value)
+    return src ? { backgroundImage: `url('${src}')`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: '#07223F' }
+  }
   return {}
 }
 
@@ -89,23 +106,27 @@ const HeroList = () => {
   useEffect(() => { fetchAll() }, [])
 
   const openCreate = () => { setEditing(null); setForm({ ...emptyForm, urutan: (items.length ? Math.max(...items.map((i) => i.urutan || 0)) : 0) + 1 }); setOpen(true) }
-  const openEdit = (it) => { setEditing(it); setForm({ ...emptyForm, ...it, bg_value: it.bg_value || '' }); setOpen(true) }
+  const openEdit = (it) => { setEditing(it); setForm({ ...emptyForm, ...it, bg_value: it.bg_value || '', bg_poster: it.bg_poster || '', durasi: clampDurasi(it.durasi) }); setOpen(true) }
 
-  const handleUpload = async (e) => {
+  // `field` lets the same endpoint fill either the image background or the
+  // poster still used by youtube slides.
+  const handleUpload = (field = 'bg_value') => async (e) => {
     const file = e.target.files?.[0]; if (!file) return
     setUploading(true)
     const fd = new FormData(); fd.append('image', file)
     try {
       const r = await api.post('/admin/hero/upload-image', fd, { headers: { 'Content-Type': undefined } })
-      setForm((f) => ({ ...f, bg_value: r.data.filename }))
-    } catch (err) { console.error(err); alert('Upload gagal') } finally { setUploading(false) }
+      setForm((f) => ({ ...f, [field]: r.data.filename }))
+    } catch (err) { console.error(err); alert('Upload gagal') } finally { setUploading(false); e.target.value = '' }
   }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      if (editing) await api.put(`/admin/hero/${editing.id_hero}`, form)
-      else await api.post('/admin/hero', form)
+      // An emptied duration field must not reach the API as ''
+      const payload = { ...form, durasi: clampDurasi(form.durasi) }
+      if (editing) await api.put(`/admin/hero/${editing.id_hero}`, payload)
+      else await api.post('/admin/hero', payload)
       setOpen(false); fetchAll()
     } catch (e) { console.error('Error saving hero:', e.response?.data || e); alert(e.response?.data?.message || 'Gagal menyimpan') }
     finally { setSaving(false) }
@@ -137,7 +158,7 @@ const HeroList = () => {
         {items.map((it, idx) => (
           <Paper key={it.id_hero} sx={{ borderRadius: 3, overflow: 'hidden', display: 'flex', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', opacity: it.is_active ? 1 : 0.5 }}>
             <Box sx={{ width: 180, minHeight: 110, color: 'white', p: 2, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', ...bgPreview(it) }}>
-              {it.bg_type === 'image' && it.overlay && <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.4)' }} />}
+              {['image', 'youtube'].includes(it.bg_type) && it.overlay && <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.4)' }} />}
               <Box sx={{ position: 'relative' }}>
                 <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.2 }}>{it.judul}</Typography>
               </Box>
@@ -147,6 +168,11 @@ const HeroList = () => {
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>{it.subjudul}</Typography>
                 <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
                   <Chip size="small" label={`BG: ${it.bg_type}`} />
+                  <Chip size="small" variant="outlined" icon={<TimerIcon />} label={`${clampDurasi(it.durasi)} detik`} />
+                  {it.bg_type === 'youtube' && (
+                    <Chip size="small" variant="outlined" color={it.bg_autoplay ? 'warning' : 'default'}
+                      label={it.bg_autoplay ? 'Autoplay latar' : 'Klik untuk putar'} />
+                  )}
                   {it.cta_text && <Chip size="small" variant="outlined" label={it.cta_text} />}
                   {it.tampil_statistik && <Chip size="small" variant="outlined" label="Statistik" />}
                   {!it.is_active && <Chip size="small" color="default" label="Nonaktif" />}
@@ -170,7 +196,7 @@ const HeroList = () => {
         <DialogContent>
           {/* Live preview */}
           <Box sx={{ borderRadius: 2, overflow: 'hidden', mb: 2.5, color: 'white', p: 3, minHeight: 140, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', ...bgPreview(form) }}>
-            {form.bg_type === 'image' && form.overlay && <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.4)' }} />}
+            {['image', 'youtube'].includes(form.bg_type) && form.overlay && <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.4)' }} />}
             <Box sx={{ position: 'relative' }}>
               <Typography sx={{ opacity: 0.9, fontSize: '0.7rem', letterSpacing: 2, textTransform: 'uppercase' }}>{form.subjudul || 'Subjudul'}</Typography>
               <Typography variant="h5" sx={{ fontWeight: 700 }}>{form.judul || 'Judul Hero'}</Typography>
@@ -189,13 +215,14 @@ const HeroList = () => {
                   let bv = f.bg_value
                   if (tp === 'color' && !/^#/.test(bv)) bv = '#0066CC'
                   if (tp === 'gradient' && !/gradient/.test(bv || '')) bv = 'linear-gradient(135deg, #0066CC, #00A651)'
-                  if (tp === 'image' && /^(#|linear-gradient)/.test(bv || '')) bv = ''
+                  if ((tp === 'image' || tp === 'youtube') && /^(#|linear-gradient)/.test(bv || '')) bv = ''
                   return { ...f, bg_type: tp, bg_value: bv }
                 })
               }} fullWidth>
                 <MenuItem value="color">Warna</MenuItem>
                 <MenuItem value="gradient">Gradient</MenuItem>
                 <MenuItem value="image">Gambar</MenuItem>
+                <MenuItem value="youtube">Video YouTube</MenuItem>
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 8 }}>
@@ -212,11 +239,55 @@ const HeroList = () => {
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Button component="label" variant="outlined" startIcon={uploading ? <CircularProgress size={14} /> : <ImageIcon />} disabled={uploading}>
                     {form.bg_value ? 'Ganti Gambar' : 'Unggah Gambar'}
-                    <input type="file" accept="image/*" hidden onChange={handleUpload} />
+                    <input type="file" accept="image/*" hidden onChange={handleUpload('bg_value')} />
                   </Button>
                   {form.bg_value && <Typography variant="caption" sx={{ color: 'text.secondary' }}>{form.bg_value}</Typography>}
                   <FormControlLabel sx={{ ml: 'auto' }} control={<Switch checked={form.overlay} onChange={(e) => setForm({ ...form, overlay: e.target.checked })} />} label="Overlay gelap" />
                 </Box>
+              )}
+              {form.bg_type === 'youtube' && (
+                <Stack spacing={1.5}>
+                  <TextField
+                    label="URL YouTube"
+                    value={form.bg_value}
+                    onChange={(e) => setForm({ ...form, bg_value: e.target.value })}
+                    fullWidth size="small"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    error={Boolean(form.bg_value) && !youtubeId(form.bg_value)}
+                    helperText={
+                      form.bg_value && !youtubeId(form.bg_value)
+                        ? 'URL YouTube tidak dikenali.'
+                        : 'Video diputar bisu dan berulang. Pakai video pendek tanpa teks penting di tepi — bingkainya dipotong agar memenuhi hero.'
+                    }
+                  />
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Button component="label" variant="outlined" size="small" startIcon={uploading ? <CircularProgress size={14} /> : <ImageIcon />} disabled={uploading}>
+                      {form.bg_poster ? 'Ganti Poster' : 'Unggah Poster'}
+                      <input type="file" accept="image/*" hidden onChange={handleUpload('bg_poster')} />
+                    </Button>
+                    {form.bg_poster && (
+                      <>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>{form.bg_poster}</Typography>
+                        <Button size="small" color="inherit" onClick={() => setForm({ ...form, bg_poster: '' })}>Hapus</Button>
+                      </>
+                    )}
+                    <FormControlLabel sx={{ ml: 'auto' }} control={<Switch checked={form.overlay} onChange={(e) => setForm({ ...form, overlay: e.target.checked })} />} label="Overlay gelap" />
+                  </Box>
+                  <FormControlLabel
+                    control={<Switch checked={!!form.bg_autoplay} onChange={(e) => setForm({ ...form, bg_autoplay: e.target.checked })} />}
+                    label="Putar otomatis sebagai latar (tanpa suara)"
+                  />
+                  <Typography variant="caption" sx={{ color: form.bg_autoplay ? 'warning.main' : 'text.secondary' }}>
+                    {form.bg_autoplay
+                      ? 'Video berjalan sendiri di latar hero. Bingkainya dipotong agar memenuhi layar, dan player baru dimuat setelah pengunjung menyetujui cookie — sebelum itu hanya poster yang tampil.'
+                      : 'Disarankan. Hero menampilkan poster dengan tombol “Putar Video”; player YouTube baru dimuat setelah diklik, sehingga tidak ada permintaan ke YouTube saat halaman dibuka.'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: form.bg_poster ? 'text.secondary' : 'warning.main' }}>
+                    {form.bg_poster
+                      ? 'Poster inilah yang dilihat pengunjung lebih dulu.'
+                      : 'Poster belum diunggah. Tanpa poster, hero memakai thumbnail YouTube (hanya setelah cookie disetujui) atau warna polos.'}
+                  </Typography>
+                </Stack>
               )}
             </Grid>
 
@@ -225,7 +296,20 @@ const HeroList = () => {
             <Grid size={{ xs: 12, sm: 6 }}><TextField label="Teks Tombol 2" value={form.cta2_text} onChange={(e) => setForm({ ...form, cta2_text: e.target.value })} fullWidth /></Grid>
             <Grid size={{ xs: 12, sm: 6 }}><TextField label="Link Tombol 2" value={form.cta2_link} onChange={(e) => setForm({ ...form, cta2_link: e.target.value })} fullWidth placeholder="/kontak" /></Grid>
 
-            <Grid size={{ xs: 12, sm: 4 }}><TextField label="Urutan" type="number" value={form.urutan} onChange={(e) => setForm({ ...form, urutan: Number(e.target.value) })} fullWidth /></Grid>
+            <Grid size={{ xs: 6, sm: 4 }}><TextField label="Urutan" type="number" value={form.urutan} onChange={(e) => setForm({ ...form, urutan: Number(e.target.value) })} fullWidth /></Grid>
+            <Grid size={{ xs: 6, sm: 4 }}>
+              <TextField
+                label="Durasi Tayang"
+                type="number"
+                value={form.durasi}
+                onChange={(e) => setForm({ ...form, durasi: e.target.value === '' ? '' : Number(e.target.value) })}
+                onBlur={() => setForm((f) => ({ ...f, durasi: clampDurasi(f.durasi) }))}
+                fullWidth
+                inputProps={{ min: MIN_DURASI, max: MAX_DURASI, step: 1 }}
+                InputProps={{ endAdornment: <InputAdornment position="end">detik</InputAdornment> }}
+                helperText={`${MIN_DURASI}–${MAX_DURASI} detik. Hanya berlaku bila slide lebih dari satu.`}
+              />
+            </Grid>
             <Grid size={{ xs: 6, sm: 4 }} sx={{ display: 'flex', alignItems: 'center' }}>
               <FormControlLabel control={<Switch checked={form.tampil_statistik} onChange={(e) => setForm({ ...form, tampil_statistik: e.target.checked })} />} label="Tampilkan statistik" />
             </Grid>

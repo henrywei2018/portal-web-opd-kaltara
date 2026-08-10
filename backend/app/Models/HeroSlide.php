@@ -19,7 +19,10 @@ class HeroSlide extends Model
         'deskripsi',
         'bg_type',
         'bg_value',
+        'bg_poster',
+        'bg_autoplay',
         'overlay',
+        'durasi',
         'cta_text',
         'cta_link',
         'cta2_text',
@@ -31,6 +34,8 @@ class HeroSlide extends Model
 
     protected $casts = [
         'overlay' => 'boolean',
+        'bg_autoplay' => 'boolean',
+        'durasi' => 'integer',
         'tampil_statistik' => 'boolean',
         'is_active' => 'boolean',
         'urutan' => 'integer',

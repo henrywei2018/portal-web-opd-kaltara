@@ -45,6 +45,9 @@ const apply = (s) => {
   el.classList.toggle('a11y-motion', !!s.motion)
   el.classList.toggle('a11y-cursor', !!s.cursor)
   el.style.fontSize = !s.fontScale || s.fontScale === 1 ? '' : `${Math.round(s.fontScale * 100)}%`
+  // CSS cannot stop motion inside an iframe, so components that embed one
+  // (the hero's video background) listen for this and unmount the player.
+  window.dispatchEvent(new Event('a11y-changed'))
 }
 
 const VOICE_SUPPORTED = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition)
