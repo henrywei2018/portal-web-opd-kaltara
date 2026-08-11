@@ -104,8 +104,35 @@ case "${1:-}" in
   --backend)  DO_FRONTEND=0 ;;
 esac
 
+# --- Per-site frontend env ---------------------------------------------------
+# Vite bakes VITE_* into the bundle at BUILD time, so the SPA can never read
+# backend/.env at runtime. Generate the override file instead: backend/.env stays
+# the ONE place a site's keys are edited. .env.production.local is gitignored
+# (*.local) and outranks the tracked .env.production, so `git pull` never touches
+# a site's own values and never conflicts on them.
+sync_frontend_env() {
+  local src="$BACKEND/.env" out="$FRONTEND/.env.production.local"
+  [ -f "$src" ] || { echo "!! $src tidak ada — lewati sync env frontend" >&2; return 0; }
+
+  local site_key enabled
+  site_key="$(sed -n 's/^RECAPTCHA_SITE_KEY=[[:space:]]*//p' "$src" | head -1 | tr -d '"'\''\r')"
+  enabled="$(sed -n 's/^RECAPTCHA_ENABLED=[[:space:]]*//p' "$src" | head -1 | tr -d '"'\''\r')"
+  [ -n "$enabled" ] || enabled=true
+  # Tanpa site key, captcha tidak mungkin dirender — matikan agar form tetap jalan.
+  [ -n "$site_key" ] || enabled=false
+
+  {
+    echo "# DIBUAT OTOMATIS oleh deploy.sh — jangan diedit; ubah backend/.env lalu deploy ulang."
+    echo "# Sumber: RECAPTCHA_SITE_KEY dan RECAPTCHA_ENABLED di backend/.env"
+    echo "VITE_RECAPTCHA_SITE_KEY=$site_key"
+    echo "VITE_REQUIRE_RECAPTCHA=$enabled"
+  } > "$out"
+  echo "==> env frontend disinkronkan dari backend/.env (captcha aktif: $enabled)"
+}
+
 build_frontend() {
   resolve_node
+  sync_frontend_env
   echo "==> Building React SPA..."
   cd "$FRONTEND"
   if [ -f package-lock.json ]; then npm ci; else npm install; fi
