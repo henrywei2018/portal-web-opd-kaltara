@@ -28,7 +28,7 @@ class AuthController extends Controller
         // Verify reCAPTCHA in production
         if (!empty($credentials['recaptcha_token'])) {
             $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret' => env('RECAPTCHA_SECRET'),
+                'secret' => config('services.recaptcha.secret'),
                 'response' => $credentials['recaptcha_token'],
                 'remoteip' => $request->ip(),
             ]);

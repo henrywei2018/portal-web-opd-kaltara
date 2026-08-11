@@ -301,7 +301,7 @@ class PublicController extends Controller
 
         // Verify reCAPTCHA. Skipped in local dev (BYPASS_RECAPTCHA) and also when
         // no secret is configured yet — so the form works before keys are set.
-        $secret = env('RECAPTCHA_SECRET');
+        $secret = config('services.recaptcha.secret');
         $bypass = (app()->environment('local') && config('app.bypass_recaptcha')) || empty($secret);
         if (!$bypass) {
             $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
