@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Pengumuman;
 use App\Models\AuditLog;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class PengumumanController extends Controller
@@ -19,7 +20,7 @@ class PengumumanController extends Controller
             $query->where('judul', 'like', '%' . $search . '%');
         }
 
-        $perPage = $request->get('per_page', 15);
+        $perPage = max(1, min((int) $request->get('per_page', 15), 100));
         return response()->json($query->orderBy('id_pengumuman', 'desc')->paginate($perPage));
     }
 
@@ -118,9 +119,7 @@ class PengumumanController extends Controller
 
     private function uploadFile($file)
     {
-        $filename = uniqid() . '_' . $file->getClientOriginalName();
-        $file->move(public_path('file'), $filename);
-        return $filename;
+        return Unggah::simpan($file, 'file', Unggah::DOKUMEN_KANTOR, '', 'file', true);
     }
 
     private function deleteFile($filename)

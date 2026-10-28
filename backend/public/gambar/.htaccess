@@ -1,0 +1,13 @@
+# Folder unggahan: tidak ada skrip yang boleh dijalankan dari sini.
+# Lapisan kedua di belakang validasi App\Support\Unggah (server Apache).
+<FilesMatch "\.(php\d?|phtml|phar|pht|phps|cgi|pl|py|sh|html?|svgz?|hta)$">
+    Require all denied
+</FilesMatch>
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+</IfModule>
+Options -Indexes -ExecCGI

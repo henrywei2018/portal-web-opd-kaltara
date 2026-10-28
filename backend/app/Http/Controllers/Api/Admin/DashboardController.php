@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Berita, Artikel, Infografis, Halaman, Layanan, Dokumen, Kategori, Pengumuman, Galeri, Video, Slider, Download, User, Komentar, Kunjungan, AuditLog, Sejarah, TugasFungsi, StrukturOrganisasi, Sambutan};
+use App\Support\HtmlAman;
+use App\Support\Roles;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -52,10 +55,10 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Latest audit logs
-        $audit_terbaru = AuditLog::orderBy('created_at', 'desc')
-            ->limit(6)
-            ->get();
+        // Jejak aktivitas memuat nama petugas dan IP; hanya untuk pengelola pengguna.
+        $audit_terbaru = Roles::can(auth('api')->user(), 'pengguna')
+            ? AuditLog::orderBy('created_at', 'desc')->limit(6)->get()
+            : collect();
 
         // Content distribution (for the mix chart)
         $content_mix = [
@@ -152,8 +155,8 @@ class DashboardController extends Controller
 
     public function auditLog(Request $request)
     {
-        $limit = $request->get('limit', 50);
-        $offset = $request->get('offset', 0);
+        $limit = max(1, min((int) $request->get('limit', 50), 200));
+        $offset = max(0, (int) $request->get('offset', 0));
 
         $logs = AuditLog::orderBy('created_at', 'desc')
             ->limit($limit)
@@ -175,11 +178,12 @@ class DashboardController extends Controller
 
     public function updateSejarah(Request $request)
     {
+        $isi = HtmlAman::bersihkan($request->validate(['isi' => 'required|string|max:200000'])['isi']);
         $sejarah = Sejarah::orderBy('id', 'desc')->first();
         if (!$sejarah) {
-            $sejarah = Sejarah::create(['isi' => $request->isi]);
+            $sejarah = Sejarah::create(['isi' => $isi]);
         } else {
-            $sejarah->update(['isi' => $request->isi]);
+            $sejarah->update(['isi' => $isi]);
         }
 
         return response()->json($sejarah);
@@ -192,11 +196,12 @@ class DashboardController extends Controller
 
     public function updateTugasFungsi(Request $request)
     {
+        $isi = HtmlAman::bersihkan($request->validate(['isi' => 'required|string|max:200000'])['isi']);
         $tugasfungsi = TugasFungsi::orderBy('id', 'desc')->first();
         if (!$tugasfungsi) {
-            $tugasfungsi = TugasFungsi::create(['isi' => $request->isi]);
+            $tugasfungsi = TugasFungsi::create(['isi' => $isi]);
         } else {
-            $tugasfungsi->update(['isi' => $request->isi]);
+            $tugasfungsi->update(['isi' => $isi]);
         }
 
         return response()->json($tugasfungsi);
@@ -209,16 +214,17 @@ class DashboardController extends Controller
 
     public function updateStruktur(Request $request)
     {
-        // Handle file upload
-        $filename = null;
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('gambar'), $filename);
-        }
+        $valid = $request->validate([
+            'file' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:10240',
+            'keterangan' => 'nullable|string|max:1000',
+        ]);
+
+        $filename = $request->hasFile('file')
+            ? Unggah::simpan($request->file('file'), 'gambar', Unggah::GAMBAR)
+            : null;
 
         $struktur = StrukturOrganisasi::orderBy('id', 'desc')->first();
-        $data = ['keterangan' => $request->keterangan];
+        $data = ['keterangan' => $valid['keterangan'] ?? null];
 
         if ($filename) {
             $data['file'] = $filename;

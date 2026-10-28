@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Promosi;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class PromosiController extends Controller
@@ -67,20 +68,13 @@ class PromosiController extends Controller
             'url' => 'nullable|string|max:500',
             // Days to hide after close; 0 = permanent
             'jeda_hari' => 'nullable|integer|min:0|max:365',
-            // Accept any raster/vector image MIME (more permissive than a fixed extension list)
-            'gambar' => ['nullable', 'file', 'max:20480', function ($attr, $value, $fail) {
-                if ($value && !str_starts_with((string) $value->getMimeType(), 'image/')) {
-                    $fail('Berkas harus berupa gambar.');
-                }
-            }],
+            'gambar' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:20480',
         ]);
     }
 
     private function uploadImage($file): string
     {
-        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-        $file->move(public_path('gambar'), $filename);
-        return $filename;
+        return Unggah::simpan($file, 'gambar', Unggah::GAMBAR, '', 'gambar');
     }
 
     private function deleteImage(?string $filename): void

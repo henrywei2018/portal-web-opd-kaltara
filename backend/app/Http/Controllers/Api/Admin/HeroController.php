@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HeroSlide;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class HeroController extends Controller
@@ -46,11 +47,10 @@ class HeroController extends Controller
      */
     public function uploadImage(Request $request)
     {
-        $request->validate(['image' => 'required|image|mimes:jpg,jpeg,png,webp|max:8192']);
+        $request->validate(['image' => 'required|' . Unggah::ATURAN_GAMBAR . '|max:8192']);
 
         $file = $request->file('image');
-        $filename = uniqid('hero_') . '.' . $file->getClientOriginalExtension();
-        $file->move(public_path('gambar'), $filename);
+        $filename = Unggah::simpan($file, 'gambar', Unggah::GAMBAR, 'hero_', 'image');
 
         return response()->json(['filename' => $filename, 'url' => url('gambar/' . $filename)], 201);
     }

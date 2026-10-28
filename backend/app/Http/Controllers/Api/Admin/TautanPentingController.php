@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TautanPenting;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class TautanPentingController extends Controller
@@ -63,20 +64,14 @@ class TautanPentingController extends Controller
         return $request->validate([
             'judul' => 'nullable|string|max:255',
             'url' => 'required|string|max:500',
-            'gambar' => ['nullable', 'file', 'max:20480', function ($attr, $value, $fail) {
-                if ($value && !str_starts_with((string) $value->getMimeType(), 'image/')) {
-                    $fail('Berkas harus berupa gambar.');
-                }
-            }],
+            'gambar' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:20480',
             'urutan' => 'nullable|integer',
         ]);
     }
 
     private function uploadImage($file): string
     {
-        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-        $file->move(public_path('gambar'), $filename);
-        return $filename;
+        return Unggah::simpan($file, 'gambar', Unggah::GAMBAR, '', 'gambar');
     }
 
     private function deleteImage(?string $filename): void

@@ -65,18 +65,22 @@ class SpaController extends Controller
         abort_unless(File::exists($index), 404, 'Frontend belum di-build. Jalankan deploy.sh / npm run build.');
 
         $resolved = $this->resolve($request);
-        $html = $this->inject(File::get($index), $resolved);
+        $html = File::get($index);
 
         $headers = [
             'Content-Type' => 'text/html; charset=UTF-8',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
         ];
+        // Nonce dipasang ke skrip milik template SEBELUM meta dinamis disisipkan.
+        // Jika urutannya terbalik, skrip apa pun yang lolos lewat judul atau
+        // pengaturan ikut mendapat nonce sah dan CSP tidak lagi menahannya.
         if (config('keamanan.csp.enabled')) {
             $nonce = Csp::nonce();
             $html = Csp::pasangNonce($html, $nonce);
             $headers[Csp::namaHeader()] = Csp::kebijakan($nonce);
         }
+        $html = $this->inject($html, $resolved);
 
         return response($html, $resolved['status'], $headers);
     }
@@ -365,7 +369,9 @@ class SpaController extends Controller
         }
 
         foreach ($resolved['jsonld'] as $schema) {
-            $json = json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            // JSON_HEX_* mengubah < > & ' menjadi \u003C dst., sehingga judul
+            // berisi "</script>" tidak bisa menutup blok ini lebih awal.
+            $json = json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             if ($json !== false) {
                 $tags[] = '<script type="application/ld+json">' . $json . '</script>';
             }

@@ -133,6 +133,6 @@ return [
     |
     */
 
-    'bypass_recaptcha' => env('BYPASS_RECAPTCHA', true),
+    'bypass_recaptcha' => env('BYPASS_RECAPTCHA', false),
 
 ];

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -19,7 +20,7 @@ class UserController extends Controller
         $data = $request->validate([
             'nama' => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:user,username',
-            'password' => 'required|string|min:6',
+            'password' => ['required', 'string', 'max:255', Password::min(10)->letters()->numbers()],
             'role' => ['required', \Illuminate\Validation\Rule::in(\App\Support\Roles::ROLES)],
             'status' => 'nullable|integer',
         ]);
@@ -62,7 +63,7 @@ class UserController extends Controller
         $data = $request->validate([
             'nama' => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:user,username,' . $id . ',id_user',
-            'password' => 'nullable|string|min:6',
+            'password' => ['nullable', 'string', 'max:255', Password::min(10)->letters()->numbers()],
             'role' => ['required', \Illuminate\Validation\Rule::in(\App\Support\Roles::ROLES)],
             'status' => 'nullable|integer',
         ]);
@@ -136,6 +137,9 @@ class UserController extends Controller
         if ($id == auth()->user()->id_user) {
             return response()->json(['error' => 'Cannot deactivate own account'], 403);
         }
+        if ($user->role === 'super_admin' && !$this->isSuperAdmin()) {
+            return response()->json(['error' => 'Hanya Super Admin yang dapat mengubah akun Super Admin'], 403);
+        }
 
         $user->update(['status' => $user->status ? 0 : 1]);
 
@@ -154,6 +158,12 @@ class UserController extends Controller
     public function resetPassword($id)
     {
         $user = User::findOrFail($id);
+
+        // Tanpa pemeriksaan ini admin biasa bisa me-reset kata sandi super_admin,
+        // menerima sandi barunya, lalu masuk sebagai super_admin.
+        if ($user->role === 'super_admin' && !$this->isSuperAdmin()) {
+            return response()->json(['error' => 'Hanya Super Admin yang dapat mengubah akun Super Admin'], 403);
+        }
 
         $newPass = $this->generatePassword(14);
         $user->update(['password' => password_hash($newPass, PASSWORD_BCRYPT)]);

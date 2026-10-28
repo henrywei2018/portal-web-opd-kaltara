@@ -6,47 +6,45 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use App\Support\Recaptcha;
+use Illuminate\Support\Facades\RateLimiter;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
+    // Gagal masuk 5 kali untuk pasangan username+IP mengunci 15 menit.
+    private const MAKS_GAGAL = 5;
+    private const JEDA_KUNCI = 900;
+
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
-            'recaptcha_token' => 'nullable|string' // Make optional for dev bypass
+            'username' => 'required|string|max:100',
+            'password' => 'required|string|max:255',
+            'recaptcha_token' => 'nullable|string|max:4096',
         ]);
 
-        // Bypass reCAPTCHA in development environment
-        if (app()->environment('local') && config('app.bypass_recaptcha')) {
-            // Skip reCAPTCHA verification in local development
-            goto attempt_login;
+        // Batas percobaan per username+IP, di samping throttle per IP pada rute.
+        // Menahan tebak kata sandi terarah ke satu akun dari banyak permintaan.
+        $kunci = 'login:' . mb_strtolower($credentials['username']) . '|' . $request->ip();
+        if (RateLimiter::tooManyAttempts($kunci, self::MAKS_GAGAL)) {
+            $detik = RateLimiter::availableIn($kunci);
+            $this->logAuditGagal($credentials['username'], 'Terlalu banyak percobaan', $request->ip());
+
+            return response()->json(['error' => "Terlalu banyak percobaan masuk. Coba lagi dalam {$detik} detik."], 429)
+                ->header('Retry-After', $detik);
         }
 
-        // Verify reCAPTCHA in production
-        if (!empty($credentials['recaptcha_token'])) {
-            $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret' => env('RECAPTCHA_SECRET'),
-                'response' => $credentials['recaptcha_token'],
-                'remoteip' => $request->ip(),
-            ]);
-
-            if (!$response->json('success')) {
-                // Log failed attempt
-                $this->logAuditGagal($credentials['username'], 'reCAPTCHA gagal', $request->ip());
-                return response()->json(['error' => 'reCAPTCHA verification failed'], 400);
-            }
+        if (!Recaptcha::lolos($credentials['recaptcha_token'] ?? null, $request->ip())) {
+            RateLimiter::hit($kunci, self::JEDA_KUNCI);
+            $this->logAuditGagal($credentials['username'], 'reCAPTCHA gagal', $request->ip());
+            return response()->json(['error' => 'reCAPTCHA verification failed'], 400);
         }
 
-        attempt_login:
-
-        // Attempt login with username
         $credentials = ['username' => $credentials['username'], 'password' => $credentials['password']];
 
         if (!$token = JWTAuth::attempt($credentials)) {
-            // Log failed attempt
+            RateLimiter::hit($kunci, self::JEDA_KUNCI);
             $this->logAuditGagal($credentials['username'], 'Kredensial salah', $request->ip());
             return response()->json(['error' => 'Unauthorized'], 401);
         }
@@ -54,12 +52,17 @@ class AuthController extends Controller
         // Get authenticated user
         $user = JWTAuth::user();
 
-        // Check user status
+        // Akun nonaktif dijawab sama seperti kredensial salah, supaya respons
+        // tidak menjadi penanda "kata sandi benar" bagi penyerang. Alasannya
+        // tetap tercatat di audit log.
         if (isset($user->status) && (int)$user->status === 0) {
+            RateLimiter::hit($kunci, self::JEDA_KUNCI);
             $this->logAuditGagal($credentials['username'], 'Akun nonaktif', $request->ip());
             JWTAuth::invalidate(JWTAuth::getToken());
-            return response()->json(['error' => 'Account inactive'], 403);
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
+
+        RateLimiter::clear($kunci);
 
         // Update last login
         $user->update(['last_login' => now()]);
@@ -121,6 +124,12 @@ class AuthController extends Controller
     {
         try {
             $newToken = JWTAuth::refresh(JWTAuth::getToken());
+            // Akun yang dinonaktifkan tidak boleh memperpanjang sesinya.
+            $user = auth('api')->setToken($newToken)->user();
+            if (!$user || (int) $user->status !== 1) {
+                auth('api')->invalidate();
+                return response()->json(['error' => 'Could not refresh token'], 401);
+            }
             return $this->respondWithToken($newToken);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Could not refresh token'], 401);

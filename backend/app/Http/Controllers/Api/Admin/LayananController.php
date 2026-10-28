@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Layanan;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class LayananController extends Controller
@@ -52,14 +53,9 @@ class LayananController extends Controller
     public function uploadImage(Request $request)
     {
         $request->validate([
-            'image' => 'required|file|max:20480',
+            'image' => 'required|' . Unggah::ATURAN_GAMBAR . '|max:20480',
         ]);
-        $file = $request->file('image');
-        if (!str_starts_with((string) $file->getMimeType(), 'image/')) {
-            return response()->json(['message' => 'Berkas harus berupa gambar.'], 422);
-        }
-        $filename = uniqid() . '.' . ($file->getClientOriginalExtension() ?: 'jpg');
-        $file->move(public_path('gambar'), $filename);
+        $filename = Unggah::simpan($request->file('image'), 'gambar', Unggah::GAMBAR, '', 'image');
 
         return response()->json(['filename' => $filename]);
     }

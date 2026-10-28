@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Halaman;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -83,12 +84,11 @@ class HalamanController extends Controller
     public function uploadImage(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpg,jpeg,png,gif,webp|max:5120',
+            'image' => 'required|' . Unggah::ATURAN_GAMBAR . '|max:5120',
         ]);
 
         $file = $request->file('image');
-        $filename = uniqid('page_') . '.' . $file->getClientOriginalExtension();
-        $file->move(public_path('gambar'), $filename);
+        $filename = Unggah::simpan($file, 'gambar', Unggah::GAMBAR, 'page_', 'image');
 
         return response()->json([
             'filename' => $filename,

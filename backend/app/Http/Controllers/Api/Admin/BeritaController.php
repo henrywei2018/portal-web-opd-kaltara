@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Berita;
 use App\Models\Galeri;
 use App\Models\AuditLog;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -30,7 +31,7 @@ class BeritaController extends Controller
             });
         }
 
-        $perPage = $request->get('per_page', 15);
+        $perPage = max(1, min((int) $request->get('per_page', 15), 100));
         return response()->json($query->orderBy('id_berita', 'desc')->paginate($perPage));
     }
 
@@ -43,11 +44,11 @@ class BeritaController extends Controller
             'tanggal_post' => 'required|date',
             'status_berita' => 'required|in:Publish,Draft',
             'idkat' => 'nullable|exists:kategori,idkat',
-            'gambar' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar2' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar3' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar4' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar5' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
+            'gambar' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar2' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar3' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar4' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar5' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
         ]);
 
         // Kontributor tidak boleh publish — paksa Draft
@@ -121,6 +122,12 @@ class BeritaController extends Controller
     {
         $berita = Berita::findOrFail($id);
 
+        // Kontributor (tanpa hak publish) hanya boleh mengelola tulisannya sendiri;
+        // tanpa ini ia bisa menurunkan atau menghapus tulisan terbit milik orang lain.
+        if (!\App\Support\Roles::canPublish(auth()->user()) && (int) $berita->id_user !== (int) auth()->user()->id_user) {
+            return response()->json(['error' => 'Anda hanya dapat mengubah tulisan Anda sendiri'], 403);
+        }
+
         $data = $request->validate([
             'judul' => 'required|string|max:255',
             'isi' => 'required|string',
@@ -128,11 +135,11 @@ class BeritaController extends Controller
             'tanggal_post' => 'required|date',
             'status_berita' => 'required|in:Publish,Draft',
             'idkat' => 'nullable|exists:kategori,idkat',
-            'gambar' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar2' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar3' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar4' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
-            'gambar5' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
+            'gambar' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar2' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar3' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar4' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
+            'gambar5' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
         ]);
 
         // Kontributor tidak boleh publish — paksa Draft
@@ -180,6 +187,12 @@ class BeritaController extends Controller
     public function destroy($id)
     {
         $berita = Berita::findOrFail($id);
+
+        // Kontributor (tanpa hak publish) hanya boleh mengelola tulisannya sendiri;
+        // tanpa ini ia bisa menurunkan atau menghapus tulisan terbit milik orang lain.
+        if (!\App\Support\Roles::canPublish(auth()->user()) && (int) $berita->id_user !== (int) auth()->user()->id_user) {
+            return response()->json(['error' => 'Anda hanya dapat mengubah tulisan Anda sendiri'], 403);
+        }
 
         // Delete all images
         $imageFields = ['gambar', 'gambar2', 'gambar3', 'gambar4', 'gambar5'];
@@ -229,7 +242,7 @@ class BeritaController extends Controller
     public function uploadContentImage(Request $request)
     {
         $request->validate([
-            'upload' => 'required|image|mimes:jpg,jpeg,png,gif,bmp,webp|max:5120',
+            'upload' => 'required|' . Unggah::ATURAN_GAMBAR . '|max:5120',
         ]);
 
         $filename = $this->uploadImage($request->file('upload'));
@@ -239,11 +252,8 @@ class BeritaController extends Controller
 
     private function uploadImage($file)
     {
-        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
+        $filename = Unggah::simpan($file, 'gambar', Unggah::GAMBAR, '', 'gambar');
         $path = public_path('gambar/' . $filename);
-
-        // Save original
-        $file->move(public_path('gambar'), $filename);
 
         // Create thumbnail using Intervention Image
         try {

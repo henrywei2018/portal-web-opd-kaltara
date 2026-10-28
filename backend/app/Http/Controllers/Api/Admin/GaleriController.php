@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Galeri;
 use App\Models\AuditLog;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class GaleriController extends Controller
@@ -25,7 +26,7 @@ class GaleriController extends Controller
             $query->where('judul', 'like', '%' . $search . '%');
         }
 
-        $perPage = $request->get('per_page', 20);
+        $perPage = max(1, min((int) $request->get('per_page', 20), 100));
         return response()->json($query->orderBy('id_galeri', 'desc')->paginate($perPage));
     }
 
@@ -33,7 +34,7 @@ class GaleriController extends Controller
     {
         $data = $request->validate([
             'judul' => 'required|string|max:255',
-            'gambar' => 'required|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
+            'gambar' => 'required|' . Unggah::ATURAN_GAMBAR . '|max:5120',
             'status' => 'required|in:Publish,Draft',
             'tanggal' => 'required|date',
             'idkat' => 'nullable|exists:kategori,idkat',
@@ -74,7 +75,7 @@ class GaleriController extends Controller
 
         $data = $request->validate([
             'judul' => 'required|string|max:255',
-            'gambar' => 'nullable|image|mimes:jpg,jpeg,png,gif,bmp|max:5120',
+            'gambar' => 'nullable|' . Unggah::ATURAN_GAMBAR . '|max:5120',
             'status' => 'required|in:Publish,Draft',
             'tanggal' => 'required|date',
             'idkat' => 'nullable|exists:kategori,idkat',
@@ -132,8 +133,7 @@ class GaleriController extends Controller
 
     private function uploadImage($file)
     {
-        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-        $file->move(public_path('gambar'), $filename);
+        $filename = Unggah::simpan($file, 'gambar', Unggah::GAMBAR, '', 'gambar');
 
         try {
             $thumbDir = public_path('gambar/thumb');

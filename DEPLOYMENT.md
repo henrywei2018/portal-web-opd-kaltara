@@ -146,6 +146,24 @@ location / {
     try_files $uri $uri/ /index.php?$query_string;
 }
 
+# Folder unggahan: WAJIB ditaruh sebelum `location ~ \.php$`. Prefix `^~`
+# menghentikan pencocokan regex, jadi berkas di sini tidak pernah diteruskan ke
+# PHP-FPM. Skrip ditolak, tipe tidak ditebak ulang (nosniff), dan CSP sandbox
+# membuat HTML yang lolos pun tidak bisa menjalankan skrip di origin situs.
+location ^~ /gambar/ {
+    location ~* \.(php\d?|phtml|phar|pht|phps|html?|svgz?|hta)$ { deny all; }
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox" always;
+    expires 30d;
+    try_files $uri =404;
+}
+location ^~ /file/ {
+    location ~* \.(php\d?|phtml|phar|pht|phps|html?|svgz?|hta)$ { deny all; }
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Content-Security-Policy "default-src 'none'; sandbox" always;
+    try_files $uri =404;
+}
+
 location ~ \.php$ {
     include fastcgi_params;
     fastcgi_pass unix:/tmp/php-cgi-83.sock;   # sesuaikan versi PHP

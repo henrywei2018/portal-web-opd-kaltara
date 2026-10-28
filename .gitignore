@@ -48,10 +48,12 @@ _ide_helper*.php
 # ---- User uploads (production keeps its own; don't sync dev files) ---------
 /backend/public/gambar/*
 !/backend/public/gambar/.gitkeep
+!/backend/public/gambar/.htaccess
 /backend/public/gambar/thumb/*
 !/backend/public/gambar/thumb/.gitkeep
 /backend/public/file/*
 !/backend/public/file/.gitkeep
+!/backend/public/file/.htaccess
 /backend/public/gamer/
 
 # ---- Node / Vite (frontend) -----------------------------------------------

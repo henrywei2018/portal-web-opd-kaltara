@@ -4,15 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Berita, Kategori, Pengumuman, Galeri, Infografis, Video, Slider, Sejarah, TugasFungsi, StrukturOrganisasi, Sambutan, Download, Komentar, Artikel, Menu, Halaman, Dokumen, KategoriDokumen, Layanan, HeroSlide, Statistik, TautanPenting, Promosi, Kunjungan};
+use App\Support\Recaptcha;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 
 class PublicController extends Controller
 {
+    // Penulis hanya ditampilkan namanya. Memuat model User utuh membocorkan
+    // username (identitas login), peran, dan waktu login admin ke publik.
+    private const PENULIS = 'user:id_user,nama';
+
     public function berita(Request $request)
     {
-        $query = Berita::with(['user', 'kategori'])
+        $query = Berita::with([self::PENULIS, 'kategori'])
             ->where('status_berita', 'Publish');
 
         // Featured/pinned news (home "Berita Pilihan")
@@ -107,7 +111,7 @@ class PublicController extends Controller
     public function detailBerita($id)
     {
         // Resolve by slug (preferred) or numeric id (legacy URLs)
-        $berita = Berita::with(['user', 'kategori'])
+        $berita = Berita::with([self::PENULIS, 'kategori'])
             ->where('status_berita', 'Publish')
             ->where(function ($q) use ($id) {
                 $q->where('slug', $id);
@@ -152,7 +156,7 @@ class PublicController extends Controller
             return response()->json(['error' => 'Category not found'], 404);
         }
 
-        $berita = Berita::with(['user', 'kategori'])
+        $berita = Berita::with([self::PENULIS, 'kategori'])
             ->where('idkat', $id)
             ->where('status_berita', 'Publish')
             ->orderBy('id_berita', 'desc')
@@ -178,7 +182,7 @@ class PublicController extends Controller
 
     public function galeri(Request $request)
     {
-        $perPage = $request->get('per_page', 12);
+        $perPage = max(1, min((int) $request->get('per_page', 12), 100));
         return response()->json(
             Galeri::where('status', 'Publish')
                 ->orderBy('id_galeri', 'desc')
@@ -296,22 +300,18 @@ class PublicController extends Controller
             'nomorkontak' => 'nullable|string|max:50',
             'subjek' => 'required|string|max:255',
             'pesan' => 'required|string|max:5000',
-            'recaptcha_token' => 'nullable|string',
+            'recaptcha_token' => 'nullable|string|max:4096',
         ]);
 
-        // Verify reCAPTCHA. Skipped in local dev (BYPASS_RECAPTCHA) and also when
-        // no secret is configured yet — so the form works before keys are set.
-        $secret = env('RECAPTCHA_SECRET');
-        $bypass = (app()->environment('local') && config('app.bypass_recaptcha')) || empty($secret);
-        if (!$bypass) {
-            $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret' => $secret,
-                'response' => $validated['recaptcha_token'] ?? '',
-                'remoteip' => $request->ip(),
-            ]);
-            if (!$response->json('success')) {
-                return response()->json(['error' => 'reCAPTCHA verification failed'], 400);
-            }
+        if (!Recaptcha::lolos($validated['recaptcha_token'] ?? null, $request->ip())) {
+            return response()->json(['error' => 'reCAPTCHA verification failed'], 400);
+        }
+
+        // Pesan publik disimpan sebagai teks polos: tag HTML dan karakter kontrol
+        // dibuang. Panel admin merendernya sebagai teks, ini lapisan kedua.
+        $teks = fn (?string $v) => trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', strip_tags((string) $v)));
+        foreach (['nama', 'nomorkontak', 'subjek', 'pesan'] as $k) {
+            $validated[$k] = $teks($validated[$k] ?? '');
         }
 
         $komentar = Komentar::create([
@@ -324,7 +324,7 @@ class PublicController extends Controller
             'is_read' => 0,
         ]);
 
-        return response()->json(['message' => 'Pesan terkirim', 'data' => $komentar], 201);
+        return response()->json(['message' => 'Pesan terkirim', 'id' => $komentar->getKey()], 201);
     }
 
     public function downloadFile($id)
@@ -345,7 +345,7 @@ class PublicController extends Controller
 
     public function artikel(Request $request)
     {
-        $query = Artikel::with(['user', 'kategori'])
+        $query = Artikel::with([self::PENULIS, 'kategori'])
             ->where('status_artikel', 'Publish')
             ->orderBy('id_artikel', 'desc');
 
@@ -354,17 +354,17 @@ class PublicController extends Controller
         }
 
         if ($request->has('search')) {
-            $query->where('judul', 'like', '%' . $request->search . '%');
+            $query->where('judul', 'like', '%' . addcslashes(mb_substr((string) $request->search, 0, 100), '%_\\') . '%');
         }
 
-        $perPage = $request->get('per_page', 5);
+        $perPage = max(1, min((int) $request->get('per_page', 5), 50));
         return response()->json($query->paginate($perPage));
     }
 
     public function detailArtikel($id)
     {
         // Resolve by slug (preferred) or numeric id (legacy URLs)
-        $artikel = Artikel::with(['user', 'kategori'])
+        $artikel = Artikel::with([self::PENULIS, 'kategori'])
             ->where('status_artikel', 'Publish')
             ->where(function ($q) use ($id) {
                 $q->where('slug', $id);
@@ -442,7 +442,7 @@ class PublicController extends Controller
             $query->whereHas('kategori', fn ($q) => $q->where('slug', $request->kategori));
         }
         if ($request->filled('search')) {
-            $query->where('judul', 'like', '%' . $request->search . '%');
+            $query->where('judul', 'like', '%' . addcslashes(mb_substr((string) $request->search, 0, 100), '%_\\') . '%');
         }
         if ($request->filled('limit')) {
             $query->limit((int) $request->limit);

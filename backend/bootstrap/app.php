@@ -15,7 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'ability' => \App\Http\Middleware\EnsureAbility::class,
+            'akun.aktif' => \App\Http\Middleware\AkunAktif::class,
         ]);
+        // Hanya host APP_URL (dan subdomainnya) yang diterima. Tanpa ini Host
+        // palsu ikut masuk ke canonical/og:url/sitemap yang dibangun dari request.
+        // Otomatis nonaktif di APP_ENV=local.
+        $middleware->trustHosts();
         // Resolve request locale (?lang / X-Locale) for on-the-fly content translation
         $middleware->appendToGroup('api', \App\Http\Middleware\SetLocale::class);
     })

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Slider;
 use App\Models\AuditLog;
+use App\Support\Unggah;
 use Illuminate\Http\Request;
 
 class SliderController extends Controller
@@ -17,14 +18,13 @@ class SliderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'foto' => 'required|image|mimes:jpg,jpeg|max:50000',
+            'foto' => 'required|image|mimes:jpg,jpeg|extensions:jpg,jpeg|max:50000',
         ]);
 
         $filename = null;
         if ($request->hasFile('foto')) {
             $file = $request->file('foto');
-            $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('gambar'), $filename);
+            $filename = Unggah::simpan($file, 'gambar', ['jpg'], '', 'foto');
 
             // Create thumbnail
             try {
@@ -61,7 +61,7 @@ class SliderController extends Controller
         $slider = Slider::findOrFail($id);
 
         $request->validate([
-            'foto' => 'nullable|image|mimes:jpg,jpeg|max:50000',
+            'foto' => 'nullable|image|mimes:jpg,jpeg|extensions:jpg,jpeg|max:50000',
         ]);
 
         $data = [];
@@ -73,8 +73,7 @@ class SliderController extends Controller
             }
 
             $file = $request->file('foto');
-            $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('gambar'), $filename);
+            $filename = Unggah::simpan($file, 'gambar', ['jpg'], '', 'foto');
 
             // Create thumbnail
             try {

@@ -31,7 +31,7 @@ Route::prefix('public')->group(function () {
     Route::get('/struktur', [PublicController::class, 'struktur']);
     Route::get('/sambutan', [PublicController::class, 'sambutan']);
     Route::get('/publikasi', [PublicController::class, 'publikasi']);
-    Route::post('/kontak', [PublicController::class, 'kontak']);
+    Route::post('/kontak', [PublicController::class, 'kontak'])->middleware('throttle:5,1');
     Route::post('/track', [PublicController::class, 'track'])->middleware('throttle:120,1');
     Route::get('/statistik-kunjungan', [PublicController::class, 'statistikKunjungan']);
     Route::get('/downloads/{id}/file', [PublicController::class, 'downloadFile']);
@@ -51,18 +51,18 @@ Route::prefix('public')->group(function () {
 
 // Authentication routes
 Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('throttle:30,1');
     Route::get('/me', [AuthController::class, 'me']);
 });
 
 // Protected admin routes (JWT auth + per-module role abilities)
-Route::middleware('auth:api')->prefix('admin')->group(function () {
+Route::middleware(['auth:api', 'akun.aktif:api', 'throttle:admin'])->prefix('admin')->group(function () {
     // Dashboard — any authenticated admin user
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/laporan-kunjungan', [DashboardController::class, 'laporanKunjungan']);
-    Route::get('/audit-log', [DashboardController::class, 'auditLog']);
+    Route::get('/audit-log', [DashboardController::class, 'auditLog'])->middleware('ability:pengguna');
 
     // Reporting (read-only recaps for review + export)
     Route::middleware('ability:laporan')->group(function () {
@@ -72,7 +72,7 @@ Route::middleware('auth:api')->prefix('admin')->group(function () {
     });
 
     // Content modules
-    Route::post('berita/{id}/toggle-pin', [BeritaController::class, 'togglePin'])->middleware('ability:berita');
+    Route::post('berita/{id}/toggle-pin', [BeritaController::class, 'togglePin'])->middleware(['ability:berita', 'ability:publish']);
     Route::post('berita/upload-image', [BeritaController::class, 'uploadContentImage'])->middleware('ability:berita');
     Route::apiResource('berita', BeritaController::class)->middleware('ability:berita');
     Route::apiResource('artikel', ArtikelController::class)->middleware('ability:artikel');
@@ -135,12 +135,15 @@ Route::middleware('auth:api')->prefix('admin')->group(function () {
         Route::post('user/{id}/reset-password', [UserController::class, 'resetPassword']);
     });
 
-    // Legacy content (sejarah, tugasfungsi, struktur) — any authenticated admin
+    // Konten lama (sejarah, tugasfungsi, struktur). Baca bebas untuk admin;
+    // menulis — termasuk unggah berkas struktur — hanya pemegang `pengaturan`.
     Route::get('content/sejarah', [DashboardController::class, 'getSejarah']);
-    Route::put('content/sejarah', [DashboardController::class, 'updateSejarah']);
     Route::get('content/tugasfungsi', [DashboardController::class, 'getTugasFungsi']);
-    Route::put('content/tugasfungsi', [DashboardController::class, 'updateTugasFungsi']);
     Route::get('content/struktur', [DashboardController::class, 'getStruktur']);
-    Route::post('content/struktur', [DashboardController::class, 'updateStruktur']);
     Route::get('content/sambutan', [DashboardController::class, 'getSambutan']);
+    Route::middleware('ability:pengaturan')->group(function () {
+        Route::put('content/sejarah', [DashboardController::class, 'updateSejarah']);
+        Route::put('content/tugasfungsi', [DashboardController::class, 'updateTugasFungsi']);
+        Route::post('content/struktur', [DashboardController::class, 'updateStruktur']);
+    });
 });

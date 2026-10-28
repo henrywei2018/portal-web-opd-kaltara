@@ -47,7 +47,10 @@ const UsersList = () => {
       if (editing) await api.put(`/admin/user/${editing.id_user}`, payload)
       else await api.post('/admin/user', payload)
       setOpen(false); fetchAll()
-    } catch (e) { alert(e.response?.data?.error || e.response?.data?.message || 'Gagal menyimpan pengguna') }
+    } catch (e) {
+      const d = e.response?.data
+      alert(d?.error || (d?.errors && Object.values(d.errors).flat().join(' ')) || d?.message || 'Gagal menyimpan pengguna')
+    }
   }
 
   const handleDelete = async (u) => {
@@ -130,6 +133,7 @@ const UsersList = () => {
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               fullWidth
               required={!editing}
+              helperText="Minimal 10 karakter, berisi huruf dan angka"
               InputProps={{ endAdornment: <IconButton size="small" onClick={() => setShowPass((v) => !v)}>{showPass ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}</IconButton> }}
             />
             <TextField select label="Peran" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} fullWidth helperText="Menentukan hak akses modul">
