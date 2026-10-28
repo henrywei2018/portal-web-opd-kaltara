@@ -24,6 +24,16 @@ class Halaman extends Model
         'id_user',
     ];
 
+    // Blok teks dan "HTML (Lanjutan)" dirender mentah di situs publik.
+    protected static function booted(): void
+    {
+        static::saving(function (self $m) {
+            if ($m->isDirty('blocks') && is_array($m->blocks)) {
+                $m->blocks = \App\Support\HtmlAman::bersihkanBlok($m->blocks);
+            }
+        });
+    }
+
     protected $casts = [
         'blocks' => 'array',
     ];

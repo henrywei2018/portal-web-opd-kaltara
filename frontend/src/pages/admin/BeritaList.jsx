@@ -277,7 +277,9 @@ const BeritaList = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      {/* disableEnforceFocus: balon CKEditor ada di luar DOM dialog; tanpa ini
+          fokus ditarik kembali ke dialog sehingga URL tautan tak bisa diketik. */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth disableEnforceFocus>
         <DialogTitle>{editMode ? 'Edit Berita' : 'Tambah Berita'}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>

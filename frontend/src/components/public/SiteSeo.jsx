@@ -21,21 +21,27 @@ const SiteSeo = () => {
   // Google Analytics (G-/UA-/AW-) or Google Tag Manager (GTM-)
   useEffect(() => {
     const id = (settings.seo_ga_id || '').trim()
-    if (!id || document.getElementById('site-analytics')) return
+    // id disisipkan ke kode skrip, jadi hanya format ID Google yang diterima.
+    if (!/^(G|UA|AW|GTM)-[A-Z0-9-]+$/i.test(id) || document.getElementById('site-analytics')) return
+    // CSP hanya menjalankan skrip ber-nonce; ambil nonce dari skrip index.html.
+    const nonce = document.querySelector('script[nonce]')?.nonce || ''
 
     if (/^GTM-/i.test(id)) {
       const s = document.createElement('script')
       s.id = 'site-analytics'
+      s.nonce = nonce
       s.text = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${id}');`
       document.head.appendChild(s)
     } else {
       const s = document.createElement('script')
       s.id = 'site-analytics'
       s.async = true
+      s.nonce = nonce
       s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`
       document.head.appendChild(s)
       const init = document.createElement('script')
       init.id = 'site-analytics-init'
+      init.nonce = nonce
       init.text = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${id}');`
       document.head.appendChild(init)
     }

@@ -14,6 +14,7 @@ import api from '../../utils/api'
 import DocumentList from './DocumentList'
 import PageHeader from '../ui/PageHeader'
 import { announce } from '../../utils/announce'
+import { htmlAman } from '../../utils/htmlAman'
 
 const REQUIRE_RECAPTCHA = import.meta.env.VITE_REQUIRE_RECAPTCHA !== 'false'
 
@@ -106,7 +107,7 @@ const TextBlock = ({ data = {} }) => (
             '& img': { maxWidth: '100%', borderRadius: 2 },
             '& a': { color: 'primary.main' }
           }}
-          dangerouslySetInnerHTML={{ __html: data.html }}
+          dangerouslySetInnerHTML={{ __html: htmlAman(data.html) }}
         />
       )}
     </SectionContainer>
@@ -275,14 +276,16 @@ const DocumentsBlock = ({ data = {} }) => {
   )
 }
 
-// Raw HTML block — full-width, renders the author's markup as-is for advanced
-// custom layouts. Content is authored by trusted admins (RBAC: ability "halaman").
+// Raw HTML block — full-width, renders the author's markup for advanced custom
+// layouts (sections, styles, iframes from allowed hosts). Scripts and event
+// handlers are stripped: editors hold "halaman" too, so raw script here would
+// let them take over admin sessions.
 const HtmlBlock = ({ data = {} }) =>
   data.html ? (
     <Box
       className="custom-html-block"
       sx={{ '& img': { maxWidth: '100%' }, '& a': { color: 'primary.main' } }}
-      dangerouslySetInnerHTML={{ __html: data.html }}
+      dangerouslySetInnerHTML={{ __html: htmlAman(data.html) }}
     />
   ) : null
 

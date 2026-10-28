@@ -26,6 +26,7 @@ import {
   SourceEditing
 } from 'ckeditor5'
 import 'ckeditor5/ckeditor5.css'
+import './RichTextEditor.css'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || ''
 

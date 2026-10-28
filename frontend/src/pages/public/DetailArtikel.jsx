@@ -10,6 +10,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { useSeo, excerpt } from '../../utils/seo'
 import ShareButtons from '../../components/public/ShareButtons'
 import ImageGalleryCarousel from '../../components/public/ImageGalleryCarousel'
+import { htmlAman } from '../../utils/htmlAman'
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '')
 
@@ -62,7 +63,7 @@ const DetailArtikel = () => {
         )}
         <Box
           sx={{ color: 'text.primary', lineHeight: 1.8, '& p': { mb: 2 }, '& img': { maxWidth: '100%', borderRadius: 2 } }}
-          dangerouslySetInnerHTML={{ __html: artikel.isi || '' }}
+          dangerouslySetInnerHTML={{ __html: htmlAman(artikel.isi) }}
         />
         {/* Photo Gallery (carousel) */}
         {(artikel.gambar2 || artikel.gambar3) && (

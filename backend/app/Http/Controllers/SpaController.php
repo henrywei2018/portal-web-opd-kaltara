@@ -6,6 +6,7 @@ use App\Models\Artikel;
 use App\Models\Berita;
 use App\Models\Halaman;
 use App\Models\Setting;
+use App\Support\Csp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
@@ -66,7 +67,18 @@ class SpaController extends Controller
         $resolved = $this->resolve($request);
         $html = $this->inject(File::get($index), $resolved);
 
-        return response($html, $resolved['status'], ['Content-Type' => 'text/html; charset=UTF-8']);
+        $headers = [
+            'Content-Type' => 'text/html; charset=UTF-8',
+            'X-Content-Type-Options' => 'nosniff',
+            'Referrer-Policy' => 'strict-origin-when-cross-origin',
+        ];
+        if (config('keamanan.csp.enabled')) {
+            $nonce = Csp::nonce();
+            $html = Csp::pasangNonce($html, $nonce);
+            $headers[Csp::namaHeader()] = Csp::kebijakan($nonce);
+        }
+
+        return response($html, $resolved['status'], $headers);
     }
 
     /** Resolve meta, HTTP status and JSON-LD for the requested path. */

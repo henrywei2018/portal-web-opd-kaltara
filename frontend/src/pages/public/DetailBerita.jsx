@@ -34,6 +34,7 @@ import { useLanguage } from '../../contexts/LanguageContext'
 import { useSeo, excerpt } from '../../utils/seo'
 import ShareButtons from '../../components/public/ShareButtons'
 import ImageGalleryCarousel from '../../components/public/ImageGalleryCarousel'
+import { htmlAman } from '../../utils/htmlAman'
 
 const DetailBerita = () => {
   const { t } = useLanguage()
@@ -275,7 +276,7 @@ const DetailBerita = () => {
                   '& th, & td': { border: '1px solid', borderColor: 'divider', p: 1, textAlign: 'left' },
                   '& pre': { bgcolor: 'action.hover', p: 2, borderRadius: 2, overflowX: 'auto' }
                 }}
-                dangerouslySetInnerHTML={{ __html: berita.isi || '' }}
+                dangerouslySetInnerHTML={{ __html: htmlAman(berita.isi) }}
               />
 
               {/* Photo Gallery (carousel) */}

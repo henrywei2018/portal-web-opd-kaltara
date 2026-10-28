@@ -186,7 +186,8 @@ class HarvestBeritaWp extends Command
         return [
             'judul'         => $this->text($post['title']['rendered'] ?? '', 255) ?: '(tanpa judul)',
             'slug'          => $slug,
-            'isi'           => (string) ($post['content']['rendered'] ?? ''),
+            // insert() massal melewati event model, jadi disanitasi langsung.
+            'isi'           => \App\Support\HtmlAman::bersihkan((string) ($post['content']['rendered'] ?? '')),
             'keyword'       => $this->text(implode(', ', $terms['post_tag'] ?? []), 255),
             'gambar'        => $this->featuredImage($post),
             'tanggal_post'  => substr((string) ($post['date'] ?? ''), 0, 10) ?: date('Y-m-d'),

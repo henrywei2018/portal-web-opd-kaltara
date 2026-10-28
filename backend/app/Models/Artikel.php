@@ -29,6 +29,17 @@ class Artikel extends Model
         'idkat'
     ];
 
+    // Isi dirender sebagai HTML mentah di situs publik; disanitasi di sini agar
+    // setiap jalur tulis (form admin, impor, tinker) ikut tercakup.
+    protected static function booted(): void
+    {
+        static::saving(function (self $m) {
+            if ($m->isDirty('isi')) {
+                $m->isi = \App\Support\HtmlAman::bersihkan($m->isi);
+            }
+        });
+    }
+
     protected $casts = [
         'tanggal_post' => 'date',
     ];

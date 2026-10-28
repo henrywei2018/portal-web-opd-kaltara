@@ -1,0 +1,9 @@
+/*
+ * Balon CKEditor (tautan, teks alternatif gambar, toolbar tabel) dipasang di
+ * <body> dengan z-index 1000, sedangkan Dialog MUI tempat editor ini dipakai
+ * berada di 1300 — balonnya tertutup. Naikkan di atas modal MUI (1300) dan
+ * snackbar/tooltip (1400–1500).
+ */
+:root {
+  --ck-z-panel: 1600;
+}

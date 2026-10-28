@@ -236,6 +236,16 @@ Aplikasi berjalan **tanpa** reCAPTCHA jika dibiarkan kosong. Untuk mengaktifkan
       hapus jika ada. Folder upload sah: `gambar/`, `file/`.
 - [ ] `RECAPTCHA_SECRET` diisi bila ingin proteksi bot (opsional).
 - [ ] Backup terjadwal DB + folder `public/gambar` (aaPanel > Cron / Backup).
+- [ ] Sekali setelah update keamanan konten: backup DB, lalu
+      `php artisan konten:sanitasi --dry-run` (lihat dampaknya) dan
+      `php artisan konten:sanitasi`. Membersihkan HTML berita/artikel/halaman
+      yang tersimpan sebelum sanitasi saat-simpan diterapkan.
+- [ ] Header `Content-Security-Policy` aktif (cek di DevTools > Network).
+      Bila sebuah embed diblokir: tambahkan host-nya ke `IFRAME_HOSTS`
+      (lihat `config/keamanan.php`). Darurat: `CSP_REPORT_ONLY=true` hanya
+      melaporkan tanpa memblokir; `CSP_ENABLED=false` mematikannya. Jalankan
+      `php artisan config:cache` setelah mengubah `.env`.
+- [ ] `composer audit` dan `npm audit --omit=dev` bersih sebelum rilis.
 
 ---
 

@@ -27,7 +27,7 @@ trait HasTranslations
 
         foreach ($this->translatable ?? [] as $field) {
             if (array_key_exists($field, $array) && is_string($array[$field]) && $array[$field] !== '') {
-                $array[$field] = $translator->translate($array[$field], $target);
+                $array[$field] = $this->amankanHtml($field, $translator->translate($array[$field], $target));
             }
         }
 
@@ -45,6 +45,12 @@ trait HasTranslations
         if (is_string($value)) {
             return $this->isTranslatableLeaf($value) ? $translator->translate($value, $target) : $value;
         }
+        if (is_array($value) && isset($value['html']) && is_string($value['html'])) {
+            $value['html'] = $this->amankanHtml('html', $translator->translate($value['html'], $target));
+            $rest = $this->translateJsonValue(array_diff_key($value, ['html' => 1]), $translator, $target);
+
+            return ['html' => $value['html']] + $rest;
+        }
         if (is_array($value)) {
             $out = [];
             foreach ($value as $key => $item) {
@@ -57,6 +63,16 @@ trait HasTranslations
             return $out;
         }
         return $value;
+    }
+
+    /**
+     * Hasil terjemahan berasal dari layanan eksternal dan bisa mengubah teks
+     * yang sudah di-escape kembali menjadi markup, jadi field HTML disanitasi
+     * ulang. Field teks biasa dirender React sebagai teks, tidak perlu.
+     */
+    private function amankanHtml(string $field, ?string $nilai): ?string
+    {
+        return in_array($field, ['isi', 'html'], true) ? \App\Support\HtmlAman::bersihkan($nilai) : $nilai;
     }
 
     /** Keys inside JSON structures that hold config/identifiers, not prose. */
