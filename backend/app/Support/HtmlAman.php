@@ -26,7 +26,14 @@ class HtmlAman
             return '';
         }
 
-        return self::sanitizer()->sanitize($html);
+        $bersih = self::sanitizer()->sanitize($html);
+
+        // Isi <iframe> diperlakukan sebagai teks mentah lalu di-escape, sehingga
+        // setiap sanitasi ulang meng-escape-nya lagi (&lt; → &amp;lt; …) dan
+        // hasilnya tak pernah stabil. Browser tidak merender isi iframe, jadi
+        // kosongkan saja. Aman di keluaran sanitizer: nilai atributnya sudah
+        // di-escape sehingga tidak memuat ">" mentah.
+        return preg_replace('~(<iframe\b[^>]*>).*?(</iframe>)~is', '$1$2', $bersih) ?? $bersih;
     }
 
     /**

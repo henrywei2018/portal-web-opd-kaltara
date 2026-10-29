@@ -34,6 +34,21 @@ class KeamananKontenTest extends TestCase
         $this->assertStringNotContainsString('evil.example', $bersih);
     }
 
+    public function test_sanitasi_stabil_bila_diulang_termasuk_isi_iframe(): void
+    {
+        // Sisa penanda kursor TinyMCE di dalam iframe (impor dari situs lama).
+        $sekali = HtmlAman::bersihkan(
+            '<p>Dokumen</p><iframe src="https://www.youtube.com/embed/abc" width="100%">'
+            . '<span data-mce-type="bookmark" style="display:inline-block">x</span></iframe>'
+        );
+
+        $this->assertSame(
+            '<p>Dokumen</p><iframe src="https://www.youtube.com/embed/abc" width="100%"></iframe>',
+            $sekali
+        );
+        $this->assertSame($sekali, HtmlAman::bersihkan($sekali));
+    }
+
     public function test_isi_berita_disanitasi_saat_disimpan_lewat_jalur_mana_pun(): void
     {
         $penulis = User::create(['nama' => 'Kontributor', 'username' => 'kontrib', 'password' => bcrypt('x'), 'role' => 'kontributor', 'status' => 1]);
