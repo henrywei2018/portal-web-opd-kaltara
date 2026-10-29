@@ -724,7 +724,7 @@ const BlockEditor = ({ block, index, updateData, docCategories = [] }) => {
           <FormControlLabel control={<Switch checked={d.showEmergency !== false} onChange={(e) => set({ showEmergency: e.target.checked })} />} label="Tampilkan peringatan darurat" />
           {d.showEmergency !== false && (
             <>
-              <TextField label="Nomor Darurat" value={d.emergencyNumber || ''} onChange={(e) => set({ emergencyNumber: e.target.value })} fullWidth size="small" placeholder="119" />
+              <TextField label="Nomor Darurat" value={d.emergencyNumber || ''} onChange={(e) => set({ emergencyNumber: e.target.value })} fullWidth size="small" helperText="Isi nomor darurat milik unit ini. Kosongkan bila tidak ada — peringatan tidak akan ditampilkan." />
               <TextField label="Teks Peringatan (opsional)" value={d.emergencyText || ''} onChange={(e) => set({ emergencyText: e.target.value })} fullWidth size="small" />
             </>
           )}
