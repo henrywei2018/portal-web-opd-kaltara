@@ -244,6 +244,38 @@ Aplikasi berjalan **tanpa** reCAPTCHA jika dibiarkan kosong. Untuk mengaktifkan
 
 ---
 
+## 13a. Login SSO Portal Kaltara (opsional)
+
+Admin dapat masuk dengan akun SSO Portal Kaltara (alur *code*, lihat
+https://portal.kaltaraprov.go.id/docs/developer). Login username/password
+tetap ada sebagai cadangan bila portal tidak dapat diakses.
+
+1. Minta admin portal mendaftarkan aplikasi:
+   - **Callback URL**: `https://DOMAIN_ANDA.go.id/sso/callback`
+   - **Alur SSO**: `code`
+   - **Role aplikasi**: buat role dengan kode `admin`, `editor`, `kontributor`
+     (atau kode lain lalu petakan lewat `SSO_PORTAL_PETA_PERAN`), dan tetapkan
+     ke pegawai yang boleh mengelola situs.
+   - Bila portal membatasi IP, daftarkan **IP publik server ini** — penukaran
+     kode dilakukan server, bukan peramban.
+2. Isi `.env` (lihat `.env.production.example`): `SSO_PORTAL_APPLICATION_ID`,
+   `SSO_PORTAL_API_KEY`, dan bila perlu `SSO_PORTAL_PETA_PERAN`. Lalu
+   `php artisan migrate --force && php artisan config:cache`.
+3. Tombol **Masuk dengan SSO Portal Kaltara** muncul di `/login`. Minta admin
+   portal menjalankan **Uji Integrasi**.
+
+Perilaku:
+- Akun dibuat otomatis saat login SSO pertama, dicocokkan lewat ID pengguna
+  portal (bukan username), sehingga akun lokal bernama sama tidak diambil alih.
+- Peran mengikuti role portal dan diperbarui setiap login. `super_admin`
+  tidak pernah diberikan otomatis kecuali dipetakan eksplisit.
+- Hanya realm `asn-kaltara` yang diterima (ubah lewat `SSO_PORTAL_REALM`).
+- Akun yang dinonaktifkan di **Pengguna** tetap tidak bisa masuk lewat SSO.
+- Sesi berakhir paling lambat saat token SSO kedaluwarsa dan tidak diperpanjang;
+  pengguna masuk ulang lewat tombol SSO.
+
+---
+
 ## 14. Checklist keamanan produksi
 
 - [ ] `APP_ENV=production`, `APP_DEBUG=false` (jangan pernah `true` di publik).

@@ -123,6 +123,11 @@ class AuthController extends Controller
     public function refresh()
     {
         try {
+            // Sesi SSO tidak diperpanjang: masa berlakunya mengikuti token
+            // portal, lalu pengguna masuk ulang lewat SSO.
+            if (JWTAuth::manager()->setRefreshFlow()->decode(JWTAuth::getToken())->get('sso')) {
+                return response()->json(['error' => 'Sesi SSO berakhir, silakan masuk kembali melalui SSO'], 401);
+            }
             $newToken = JWTAuth::refresh(JWTAuth::getToken());
             // Akun yang dinonaktifkan tidak boleh memperpanjang sesinya.
             $user = auth('api')->setToken($newToken)->user();

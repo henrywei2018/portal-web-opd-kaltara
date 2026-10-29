@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // palsu ikut masuk ke canonical/og:url/sitemap yang dibangun dari request.
         // Otomatis nonaktif di APP_ENV=local.
         $middleware->trustHosts();
+        // SSO Portal Kaltara: callback dikirim portal lewat POST lintas situs
+        // (keamanannya dari verifikasi code ke portal), dan cookie pengikat
+        // serah-terima dibaca di rute API yang tidak mendekripsi cookie.
+        $middleware->validateCsrfTokens(except: ['sso/callback']);
+        $middleware->encryptCookies(except: ['sso_serah']);
         // Resolve request locale (?lang / X-Locale) for on-the-fly content translation
         $middleware->appendToGroup('api', \App\Http\Middleware\SetLocale::class);
     })

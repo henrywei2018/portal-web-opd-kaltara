@@ -100,7 +100,14 @@ const UsersList = () => {
             {users.map((u) => (
               <TableRow key={u.id_user} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                 <TableCell sx={{ fontWeight: 500 }}>{u.nama}{u.id_user === currentUser?.id_user && <Chip size="small" label="Anda" sx={{ ml: 1 }} />}</TableCell>
-                <TableCell><Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{u.username}</Typography></TableCell>
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{u.username}</Typography>
+                  {u.sso_id && (
+                    <Tooltip title={`Akun SSO Portal Kaltara${u.nip ? ` · NIP ${u.nip}` : ''}. Peran diperbarui dari portal setiap login.`}>
+                      <Chip size="small" label="SSO" color="info" variant="outlined" sx={{ mt: 0.5, height: 20, fontSize: '0.68rem' }} />
+                    </Tooltip>
+                  )}
+                </TableCell>
                 <TableCell><Chip size="small" label={ROLE_LABELS[u.role] || u.role} color={ROLE_COLORS[u.role] || 'default'} /></TableCell>
                 <TableCell>
                   <Chip size="small" label={u.status ? 'Aktif' : 'Nonaktif'} color={u.status ? 'success' : 'default'} variant={u.status ? 'filled' : 'outlined'}

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useSettings } from '../../contexts/SettingsContext'
 import {
@@ -9,19 +9,64 @@ import {
   TextField,
   Button,
   Typography,
-  Alert
+  Alert,
+  Divider,
+  CircularProgress
 } from '@mui/material'
+import { VerifiedUser } from '@mui/icons-material'
+import api from '../../utils/api'
 import GoogleReCaptcha from 'react-google-recaptcha'
 
+// Kode galat dari callback SSO (?sso_galat=...) -> pesan untuk pengguna.
+const PESAN_SSO = {
+  nonaktif: 'Login SSO belum diaktifkan untuk situs ini.',
+  gagal: 'Login melalui SSO Portal Kaltara gagal. Silakan coba lagi.',
+  realm: 'Akun SSO Anda tidak termasuk pengguna yang diizinkan masuk panel admin.',
+  peran: 'Akun Anda belum diberi peran untuk aplikasi ini di SSO Portal Kaltara. Hubungi admin portal.',
+  akun_nonaktif: 'Akun Anda dinonaktifkan di situs ini. Hubungi administrator.',
+}
+
 const LoginPage = () => {
-  const { login } = useAuth()
+  const { login, loginSso } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const [sso, setSso] = useState(null)
+  const [ssoProses, setSsoProses] = useState(Boolean(params.get('sso')))
+  const sudahTukar = useRef(false)
   const { settings } = useSettings()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [recaptchaToken, setRecaptchaToken] = useState(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(() => {
+    const galat = params.get('sso_galat')
+    return galat ? (PESAN_SSO[galat] || PESAN_SSO.gagal) : ''
+  })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    api.get('/auth/sso').then((r) => setSso(r.data)).catch(() => setSso(null))
+  }, [])
+
+  // Kembali dari portal: tukar kode serah-terima (sekali, meski StrictMode
+  // menjalankan efek dua kali), lalu bersihkan kodenya dari URL.
+  useEffect(() => {
+    const kode = params.get('sso')
+    const galat = params.get('sso_galat')
+    if (galat) {
+      // Pesannya sudah dibaca saat inisialisasi state; cukup rapikan URL.
+      setParams({}, { replace: true })
+      return
+    }
+    if (!kode || sudahTukar.current) return
+    sudahTukar.current = true
+    setParams({}, { replace: true })
+    loginSso(kode)
+      .then(() => navigate('/admin/dashboard', { replace: true }))
+      .catch((err) => {
+        setError(err.response?.data?.error || PESAN_SSO.gagal)
+        setSsoProses(false)
+      })
+  }, [params, setParams, loginSso, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -72,7 +117,32 @@ const LoginPage = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          {ssoProses && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, py: 2 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2">Menyelesaikan login SSO…</Typography>
+            </Box>
+          )}
+
+          {sso?.aktif && !ssoProses && (
+            <>
+              <Button
+                component="a"
+                href={sso.url_masuk}
+                fullWidth
+                size="large"
+                variant="contained"
+                color="secondary"
+                startIcon={<VerifiedUser />}
+                sx={{ mt: 1 }}
+              >
+                Masuk dengan SSO Portal Kaltara
+              </Button>
+              <Divider sx={{ my: 3, color: 'text.secondary', fontSize: '0.8rem' }}>atau dengan akun lokal</Divider>
+            </>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, display: ssoProses ? 'none' : 'block' }}>
             <TextField
               margin="normal"
               required

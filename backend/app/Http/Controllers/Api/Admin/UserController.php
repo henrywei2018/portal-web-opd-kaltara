@@ -190,11 +190,7 @@ class UserController extends Controller
 
     private function levelForRole(string $role): int
     {
-        return match ($role) {
-            'super_admin', 'admin' => 1,
-            'editor' => 2,
-            default => 3,
-        };
+        return \App\Support\Roles::level($role);
     }
 
     private function generatePassword($length = 14)

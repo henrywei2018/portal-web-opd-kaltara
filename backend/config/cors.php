@@ -33,6 +33,8 @@ return [
 
     // JWT is sent via the Authorization header (not cookies), so credentials
     // are not required. Keep false to allow wildcard origins safely.
-    'supports_credentials' => false,
+    // Kredensial (cookie) hanya diizinkan bila asal SPA ditulis eksplisit di
+    // FRONTEND_URL; dipakai cookie pengikat SSO saat SPA dan API beda origin.
+    'supports_credentials' => trim((string) env('FRONTEND_URL', '')) !== '',
 
 ];

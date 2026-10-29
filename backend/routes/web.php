@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\SitemapController;
 use App\Http\Controllers\SpaController;
+use App\Http\Controllers\SsoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +28,10 @@ Route::get('/robots.txt', function () {
 
     return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
 });
+
+// SSO Portal Kaltara (lihat App\Http\Controllers\SsoController).
+Route::get('/sso/login', [SsoController::class, 'masuk'])->middleware('throttle:20,1');
+Route::post('/sso/callback', [SsoController::class, 'callback'])->middleware('throttle:20,1');
 
 // Serve the SPA (with server-injected meta) for all other paths.
 Route::get('/', [SpaController::class, 'serve']);

@@ -19,6 +19,16 @@ class Roles
         'kontributor' => 'Kontributor',
     ];
 
+    /** Level warisan (kolom user.level) untuk sebuah peran. */
+    public static function level(string $role): int
+    {
+        return match ($role) {
+            'super_admin', 'admin' => 1,
+            'editor' => 2,
+            default => 3,
+        };
+    }
+
     public static function abilities(?string $role): array
     {
         return match ($role) {

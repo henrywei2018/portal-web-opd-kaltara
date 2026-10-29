@@ -55,6 +55,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('throttle:30,1');
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/sso', [\App\Http\Controllers\SsoController::class, 'status']);
+    Route::post('/sso/selesai', [\App\Http\Controllers\SsoController::class, 'selesai'])->middleware('throttle:10,1');
 });
 
 // Protected admin routes (JWT auth + per-module role abilities)

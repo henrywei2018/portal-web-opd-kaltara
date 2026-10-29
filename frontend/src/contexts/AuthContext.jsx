@@ -60,6 +60,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Login SSO Portal Kaltara: tukar kode serah-terima dari callback menjadi JWT.
+  // withCredentials agar cookie pengikat ikut terkirim bila SPA dan API beda origin.
+  const loginSso = async (kode) => {
+    const response = await api.post('/auth/sso/selesai', { kode }, { withCredentials: true });
+    const { access_token, user } = response.data;
+    if (typeof access_token !== 'string') {
+      throw new Error('Invalid token received from server');
+    }
+    localStorage.setItem('token', access_token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+    setUser(user);
+    return user;
+  };
+
   const logout = async () => {
     try {
       await api.post('/auth/logout');
@@ -79,7 +93,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, can }}>
+    <AuthContext.Provider value={{ user, login, loginSso, logout, loading, can }}>
       {children}
     </AuthContext.Provider>
   );
