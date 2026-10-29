@@ -16,7 +16,7 @@ return [
     'iframe_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env(
         'IFRAME_HOSTS',
         'www.youtube.com,www.youtube-nocookie.com,www.google.com,maps.google.com,player.vimeo.com,'
-        . 'lookerstudio.google.com,datastudio.google.com,docs.google.com'
+        . 'lookerstudio.google.com,datastudio.google.com,docs.google.com,drive.google.com'
     ))))),
 
     'csp' => [
